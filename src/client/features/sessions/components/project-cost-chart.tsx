@@ -1,15 +1,16 @@
+import { X } from 'lucide-react'
 import {
   Bar,
   BarChart,
+  CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Cell,
 } from 'recharts'
-import { X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { useLocale } from '@/context/locale-provider'
 import type { ProjectBreakdown } from '@/lib/api'
 
 interface ProjectCostChartProps {
@@ -19,16 +20,16 @@ interface ProjectCostChartProps {
 }
 
 const BAR_COLORS = [
-  '#7f1d1d', // Red 900
-  '#991b1b', // Red 800
-  '#b91c1c', // Red 700
-  '#dc2626', // Red 600
-  '#ef4444', // Red 500
-  '#f87171', // Red 400
-  '#fca5a5', // Red 300
-  '#fecaca', // Red 200
-  '#fee2e2', // Red 100
-  '#fef2f2', // Red 50
+  '#7f1d1d',
+  '#991b1b',
+  '#b91c1c',
+  '#dc2626',
+  '#ef4444',
+  '#f87171',
+  '#fca5a5',
+  '#fecaca',
+  '#fee2e2',
+  '#fef2f2',
 ]
 
 function getBarColor(index: number, total: number): string {
@@ -39,9 +40,12 @@ function getBarColor(index: number, total: number): string {
   return BAR_COLORS[colorIndex]
 }
 
-function formatProjectName(path: string): string {
-  const parts = path.split('-')
-  return (parts[parts.length - 1] || path).toUpperCase()
+function formatProjectName(path: string | undefined, fallback: string): string {
+  const value = path?.trim()
+  if (!value) return fallback
+
+  const parts = value.split('-')
+  return (parts[parts.length - 1] || value).toUpperCase()
 }
 
 interface CustomTickProps {
@@ -52,6 +56,7 @@ interface CustomTickProps {
 
 function CustomYAxisTick({ x, y, payload }: CustomTickProps) {
   if (!payload) return null
+
   return (
     <text
       x={Number(x)}
@@ -71,21 +76,25 @@ export function ProjectCostChart({
   activeProject,
   onProjectClick,
 }: ProjectCostChartProps) {
+  const { locale, text } = useLocale()
+  const numberLocale = locale === 'zh' ? 'zh-CN' : 'en-US'
+  const unknownProjectLabel = text('未知项目', 'Unknown Project')
+
   const chartData = data
-    .filter((p) => p.totalCost > 0 || p.sessionCount > 0)
-    .map((p) => ({
-      name: formatProjectName(p.project),
-      project: p.project,
-      cost: p.totalCost,
-      sessions: p.sessionCount,
-      inputTokens: p.totalInputTokens,
-      outputTokens: p.totalOutputTokens,
+    .filter((item) => item.totalCost > 0 || item.sessionCount > 0)
+    .map((item) => ({
+      name: formatProjectName(item.project, unknownProjectLabel),
+      project: item.project,
+      cost: item.totalCost,
+      sessions: item.sessionCount,
+      inputTokens: item.totalInputTokens,
+      outputTokens: item.totalOutputTokens,
     }))
 
   if (chartData.length === 0) {
     return (
-      <div className='flex h-[200px] items-center justify-center text-muted-foreground text-center px-4'>
-        No project data available yet.
+      <div className='flex h-[200px] items-center justify-center px-4 text-center text-muted-foreground'>
+        {text('暂无项目数据。', 'No project data available yet.')}
       </div>
     )
   }
@@ -96,13 +105,15 @@ export function ProjectCostChart({
     <div>
       {activeProject && (
         <div className='mb-3 flex items-center gap-2'>
-          <span className='text-sm text-muted-foreground'>Filtered by:</span>
+          <span className='text-sm text-muted-foreground'>
+            {text('按项目筛选：', 'Filtered by:')}
+          </span>
           <Badge
             variant='secondary'
             className='cursor-pointer gap-1'
             onClick={() => onProjectClick(activeProject)}
           >
-            {formatProjectName(activeProject)}
+            {formatProjectName(activeProject, unknownProjectLabel)}
             <X className='h-3 w-3' />
           </Badge>
         </div>
@@ -115,7 +126,7 @@ export function ProjectCostChart({
         >
           <CartesianGrid
             strokeDasharray='3 3'
-            horizontal={true}
+            horizontal
             vertical={false}
             stroke='hsl(var(--border))'
           />
@@ -139,31 +150,41 @@ export function ProjectCostChart({
           <Tooltip
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
-                const d = payload[0].payload as (typeof chartData)[0]
+                const item = payload[0].payload as (typeof chartData)[0]
+
                 return (
-                  <div className='rounded-lg border bg-background p-3 shadow-md min-w-[180px]'>
-                    <div className='mb-2 font-jersey text-base'>{d.name}</div>
+                  <div className='min-w-[180px] rounded-lg border bg-background p-3 shadow-md'>
+                    <div className='mb-2 font-jersey text-base'>{item.name}</div>
                     <div className='space-y-1.5'>
                       <div className='flex items-center justify-between gap-4'>
-                        <span className='text-xs text-muted-foreground'>Cost</span>
-                        <span className='font-mono font-medium text-sm'>
-                          ${d.cost.toFixed(4)}
+                        <span className='text-xs text-muted-foreground'>
+                          {text('成本', 'Cost')}
+                        </span>
+                        <span className='font-mono text-sm font-medium'>
+                          ${item.cost.toFixed(4)}
                         </span>
                       </div>
                       <div className='flex items-center justify-between gap-4'>
-                        <span className='text-xs text-muted-foreground'>Sessions</span>
-                        <span className='font-mono font-medium text-sm'>
-                          {d.sessions.toLocaleString('en-US')}
+                        <span className='text-xs text-muted-foreground'>
+                          {text('会话', 'Sessions')}
+                        </span>
+                        <span className='font-mono text-sm font-medium'>
+                          {item.sessions.toLocaleString(numberLocale)}
                         </span>
                       </div>
-                      <div className='flex items-center justify-between gap-4 text-xs text-muted-foreground border-t pt-1.5'>
-                        <span>{(d.inputTokens / 1000).toFixed(1)}K in</span>
-                        <span>{(d.outputTokens / 1000).toFixed(1)}K out</span>
+                      <div className='flex items-center justify-between gap-4 border-t pt-1.5 text-xs text-muted-foreground'>
+                        <span>
+                          {(item.inputTokens / 1000).toFixed(1)}K {text('输入', 'in')}
+                        </span>
+                        <span>
+                          {(item.outputTokens / 1000).toFixed(1)}K {text('输出', 'out')}
+                        </span>
                       </div>
                     </div>
                   </div>
                 )
               }
+
               return null
             }}
           />

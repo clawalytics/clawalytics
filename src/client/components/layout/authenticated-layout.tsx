@@ -5,6 +5,11 @@ import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
+import {
+  DesktopWindowChrome,
+  isWindowsDesktopShell,
+} from '@/components/layout/desktop-window-chrome'
+import { DesktopCloseDialog } from '@/components/layout/desktop-close-dialog'
 import { SkipToMain } from '@/components/skip-to-main'
 import { useWebSocket } from '@/lib/ws'
 
@@ -14,16 +19,23 @@ type AuthenticatedLayoutProps = {
 
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const defaultOpen = getCookie('sidebar_state') !== 'false'
+  const desktopShell = isWindowsDesktopShell()
   useWebSocket()
 
   return (
     <SearchProvider>
       <LayoutProvider>
-        <SidebarProvider defaultOpen={defaultOpen}>
+        <SidebarProvider
+          defaultOpen={defaultOpen}
+          className={cn(desktopShell && 'desktop-shell')}
+        >
           <SkipToMain />
+          {desktopShell && <DesktopWindowChrome />}
+          {desktopShell && <DesktopCloseDialog />}
           <AppSidebar />
           <SidebarInset
             className={cn(
+              'pt-[var(--desktop-titlebar-height)]',
               // Set content container, so we can use container queries
               '@container/content',
 

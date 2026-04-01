@@ -1,5 +1,6 @@
 import { ArrowUpDown } from 'lucide-react'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -8,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
+import { useLocale } from '@/context/locale-provider'
 import type { Channel } from '@/lib/api'
 
 interface ChannelsTableProps {
@@ -18,8 +19,8 @@ interface ChannelsTableProps {
 type SortField = 'name' | 'total_cost' | 'message_count'
 type SortDirection = 'asc' | 'desc'
 
-
 export function ChannelsTable({ channels }: ChannelsTableProps) {
+  const { text } = useLocale()
   const [sortField, setSortField] = useState<SortField>('total_cost')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
@@ -63,7 +64,10 @@ export function ChannelsTable({ channels }: ChannelsTableProps) {
   if (channels.length === 0) {
     return (
       <div className='flex h-32 items-center justify-center text-muted-foreground'>
-        No channels found. Connect OpenClaw with a messaging service.
+        {text(
+          '未找到渠道。请先连接 OpenClaw 后再查看。',
+          'No channels found. Connect OpenClaw first to see channel data.'
+        )}
       </div>
     )
   }
@@ -80,7 +84,7 @@ export function ChannelsTable({ channels }: ChannelsTableProps) {
                 className='-ml-3 h-8'
                 onClick={() => handleSort('name')}
               >
-                Channel
+                {text('渠道', 'Channel')}
                 <ArrowUpDown className='ml-2 h-4 w-4' />
               </Button>
             </TableHead>
@@ -91,12 +95,16 @@ export function ChannelsTable({ channels }: ChannelsTableProps) {
                 className='-mr-3 h-8'
                 onClick={() => handleSort('total_cost')}
               >
-                Cost
+                {text('成本', 'Cost')}
                 <ArrowUpDown className='ml-2 h-4 w-4' />
               </Button>
             </TableHead>
-            <TableHead className='text-right'>Input Tokens</TableHead>
-            <TableHead className='text-right'>Output Tokens</TableHead>
+            <TableHead className='text-right'>
+              {text('输入 Token', 'Input Tokens')}
+            </TableHead>
+            <TableHead className='text-right'>
+              {text('输出 Token', 'Output Tokens')}
+            </TableHead>
             <TableHead className='text-right'>
               <Button
                 variant='ghost'
@@ -104,7 +112,7 @@ export function ChannelsTable({ channels }: ChannelsTableProps) {
                 className='-mr-3 h-8'
                 onClick={() => handleSort('message_count')}
               >
-                Messages
+                {text('消息数', 'Messages')}
                 <ArrowUpDown className='ml-2 h-4 w-4' />
               </Button>
             </TableHead>

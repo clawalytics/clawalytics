@@ -1,26 +1,29 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { formatDistanceToNow } from 'date-fns'
-import { enUS } from 'date-fns/locale'
 import {
   Activity,
-  Clock,
   AlertCircle,
-  Wrench,
-  Search,
+  Clock,
   Download,
+  Search,
+  Wrench,
 } from 'lucide-react'
-import { ToolsIcon } from '@/components/icons/tools-icon'
 import {
   Bar,
   BarChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
   CartesianGrid,
   Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts'
+import { ToolsIcon } from '@/components/icons/tools-icon'
+import { Header } from '@/components/layout/header'
+import { Main } from '@/components/layout/main'
+import { LanguageSwitch } from '@/components/language-switch'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -28,16 +31,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -46,37 +39,60 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ThemeSwitch } from '@/components/theme-switch'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { useLocale } from '@/context/locale-provider'
 import { getOutboundCalls, getToolStats } from '@/lib/api'
+import { formatRelativeTime } from '@/lib/i18n'
 
 ToolsAnalytics.displayName = 'ToolsAnalytics'
 
 const PAGE_SIZE = 50
 
 const statusOptions = [
-  { value: 'all', label: 'All Status' },
-  { value: 'success', label: 'Success' },
-  { value: 'error', label: 'Error' },
-  { value: 'pending', label: 'Pending' },
+  { value: 'all', zh: '全部状态', en: 'All Statuses' },
+  { value: 'success', zh: '成功', en: 'Success' },
+  { value: 'error', zh: '失败', en: 'Error' },
+  { value: 'pending', zh: '处理中', en: 'Pending' },
 ]
 
-// Red gradient colors for bars (darker to lighter)
 const BAR_COLORS = [
-  '#7f1d1d', // Red 900
-  '#991b1b', // Red 800
-  '#b91c1c', // Red 700
-  '#dc2626', // Red 600
-  '#ef4444', // Red 500
-  '#f87171', // Red 400
-  '#fca5a5', // Red 300
-  '#fecaca', // Red 200
-  '#fee2e2', // Red 100
-  '#fef2f2', // Red 50
+  '#7f1d1d',
+  '#991b1b',
+  '#b91c1c',
+  '#dc2626',
+  '#ef4444',
+  '#f87171',
+  '#fca5a5',
+  '#fecaca',
+  '#fee2e2',
+  '#fef2f2',
 ]
+
+function getStatusLabel(
+  status: string | null | undefined,
+  locale: 'zh' | 'en'
+): string {
+  const labels: Record<string, { zh: string; en: string }> = {
+    success: { zh: '成功', en: 'Success' },
+    error: { zh: '失败', en: 'Error' },
+    pending: { zh: '处理中', en: 'Pending' },
+  }
+
+  if (!status) return locale === 'zh' ? '未知' : 'Unknown'
+  const label = labels[status]
+  return label ? (locale === 'zh' ? label.zh : label.en) : status
+}
 
 export function ToolsAnalytics() {
+  const { locale, text } = useLocale()
   const [page, setPage] = useState(0)
   const [toolNameSearch, setToolNameSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -106,17 +122,17 @@ export function ToolsAnalytics() {
   const startItem = page * PAGE_SIZE + 1
   const endItem = Math.min((page + 1) * PAGE_SIZE, total)
 
-  const errorCalls = toolCalls.filter((c) => c.status === 'error').length
-  const errorRate = toolCalls.length > 0 ? (errorCalls / toolCalls.length) * 100 : 0
+  const errorCalls = toolCalls.filter((call) => call.status === 'error').length
+  const validDurations = toolCalls
+    .map((call) => call.duration_ms)
+    .filter((duration): duration is number => duration !== null)
+  const errorRate =
+    toolCalls.length > 0 ? (errorCalls / toolCalls.length) * 100 : 0
   const avgDuration =
-    toolCalls.length > 0
-      ? toolCalls.reduce((acc, c) => acc + (c.duration_ms ?? 0), 0) /
-        toolCalls.filter((c) => c.duration_ms !== null).length
+    validDurations.length > 0
+      ? validDurations.reduce((sum, duration) => sum + duration, 0) /
+        validDurations.length
       : 0
-
-  const handleFilterChange = () => {
-    setPage(0)
-  }
 
   const chartData = (toolStats ?? [])
     .slice(0, 10)
@@ -136,9 +152,10 @@ export function ToolsAnalytics() {
       <Header>
         <div className='flex items-center gap-2'>
           <ToolsIcon active className='h-6 w-6' />
-          <span className='font-jersey text-xl'>Tools</span>
+          <span className='font-jersey text-xl'>{text('工具', 'Tools')}</span>
         </div>
         <div className='ms-auto flex items-center space-x-4'>
+          <LanguageSwitch />
           <ThemeSwitch />
         </div>
       </Header>
@@ -146,9 +163,14 @@ export function ToolsAnalytics() {
       <Main>
         <div className='mb-6 flex items-center justify-between'>
           <div>
-            <h1 className='text-3xl font-bold tracking-tight'>Tool Analytics</h1>
+            <h1 className='text-3xl font-bold tracking-tight'>
+              {text('工具分析', 'Tool Analytics')}
+            </h1>
             <p className='text-muted-foreground'>
-              Overview of tool calls and statistics
+              {text(
+                '查看工具调用与运行统计',
+                'Inspect tool call activity and execution stats'
+              )}
             </p>
           </div>
           <Button
@@ -157,18 +179,16 @@ export function ToolsAnalytics() {
             onClick={() => window.open('/api/export/tools?format=csv', '_blank')}
           >
             <Download className='mr-2 h-4 w-4' />
-            Export CSV
+            {text('导出 CSV', 'Export CSV')}
           </Button>
         </div>
 
-        {/* Stats Cards Row */}
-        <div className='grid gap-4 sm:grid-cols-3 mb-6'>
-          {/* Total Calls Card */}
+        <div className='mb-6 grid gap-4 sm:grid-cols-3'>
           <Card className='relative overflow-hidden'>
-            <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full' />
+            <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-red-500/10 to-transparent' />
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-sm font-medium'>
-                Total Calls
+                {text('总调用数', 'Total Calls')}
               </CardTitle>
               <div className='rounded-full bg-red-500/10 p-2'>
                 <Activity className='h-4 w-4 text-red-500' />
@@ -177,26 +197,27 @@ export function ToolsAnalytics() {
             <CardContent>
               {callsLoading ? (
                 <>
-                  <Skeleton className='h-8 w-16 mb-1' />
+                  <Skeleton className='mb-1 h-8 w-16' />
                   <Skeleton className='h-4 w-24' />
                 </>
               ) : (
                 <>
-                  <div className='text-2xl font-bold text-red-600 dark:text-red-400'>{total}</div>
+                  <div className='text-2xl font-bold text-red-600 dark:text-red-400'>
+                    {total}
+                  </div>
                   <p className='text-xs text-muted-foreground'>
-                    Total tool calls
+                    {text('工具总调用次数', 'Total tool invocations')}
                   </p>
                 </>
               )}
             </CardContent>
           </Card>
 
-          {/* Average Duration Card */}
           <Card className='relative overflow-hidden'>
-            <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full' />
+            <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-red-500/10 to-transparent' />
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-sm font-medium'>
-                Average Duration
+                {text('平均耗时', 'Average Duration')}
               </CardTitle>
               <div className='rounded-full bg-red-500/10 p-2'>
                 <Clock className='h-4 w-4 text-red-500' />
@@ -205,7 +226,7 @@ export function ToolsAnalytics() {
             <CardContent>
               {callsLoading ? (
                 <>
-                  <Skeleton className='h-8 w-20 mb-1' />
+                  <Skeleton className='mb-1 h-8 w-20' />
                   <Skeleton className='h-4 w-24' />
                 </>
               ) : (
@@ -214,18 +235,19 @@ export function ToolsAnalytics() {
                     {avgDuration > 0 ? `${Math.round(avgDuration)}ms` : '-'}
                   </div>
                   <p className='text-xs text-muted-foreground'>
-                    Per call
+                    {text('每次调用', 'Per invocation')}
                   </p>
                 </>
               )}
             </CardContent>
           </Card>
 
-          {/* Error Rate Card */}
           <Card className='relative overflow-hidden'>
-            <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full' />
+            <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-red-500/10 to-transparent' />
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>Error Rate</CardTitle>
+              <CardTitle className='text-sm font-medium'>
+                {text('失败率', 'Error Rate')}
+              </CardTitle>
               <div className='rounded-full bg-red-500/10 p-2'>
                 <AlertCircle className='h-4 w-4 text-red-500' />
               </div>
@@ -233,7 +255,7 @@ export function ToolsAnalytics() {
             <CardContent>
               {callsLoading ? (
                 <>
-                  <Skeleton className='h-8 w-16 mb-1' />
+                  <Skeleton className='mb-1 h-8 w-16' />
                   <Skeleton className='h-4 w-24' />
                 </>
               ) : (
@@ -242,7 +264,10 @@ export function ToolsAnalytics() {
                     {errorRate.toFixed(1)}%
                   </div>
                   <p className='text-xs text-muted-foreground'>
-                    {errorCalls} of {toolCalls.length} failed
+                    {text(
+                      `共 ${toolCalls.length} 次调用，其中失败 ${errorCalls} 次`,
+                      `${errorCalls} failed out of ${toolCalls.length} calls`
+                    )}
                   </p>
                 </>
               )}
@@ -250,23 +275,23 @@ export function ToolsAnalytics() {
           </Card>
         </div>
 
-        {/* Chart and Table Row */}
         <div className='grid gap-6 lg:grid-cols-2'>
-          {/* Tool Usage Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Tool Usage</CardTitle>
+              <CardTitle>{text('工具使用情况', 'Tool Usage')}</CardTitle>
               <CardDescription>
-                Most used tools (last 30 days)
+                {text('最近 30 天最常用的工具', 'Most-used tools in the last 30 days')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {statsLoading ? (
                 <Skeleton className='h-[300px] w-full' />
               ) : chartData.length === 0 ? (
-                <div className='flex flex-col items-center justify-center h-[300px]'>
-                  <Wrench className='h-12 w-12 text-muted-foreground mb-4' />
-                  <p className='text-muted-foreground'>No data available</p>
+                <div className='flex h-[300px] flex-col items-center justify-center'>
+                  <Wrench className='mb-4 h-12 w-12 text-muted-foreground' />
+                  <p className='text-muted-foreground'>
+                    {text('暂无数据', 'No data')}
+                  </p>
                 </div>
               ) : (
                 <ResponsiveContainer width='100%' height={300}>
@@ -275,12 +300,6 @@ export function ToolsAnalytics() {
                     layout='vertical'
                     margin={{ top: 5, right: 30, left: 5, bottom: 5 }}
                   >
-                    <defs>
-                      <linearGradient id='barGradient' x1='0' y1='0' x2='1' y2='0'>
-                        <stop offset='0%' stopColor='#7f1d1d' />
-                        <stop offset='100%' stopColor='#ef4444' />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray='3 3' className='stroke-muted' />
                     <XAxis type='number' className='text-xs' />
                     <YAxis
@@ -293,15 +312,16 @@ export function ToolsAnalytics() {
                     <Tooltip
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
-                          const data = payload[0].payload
+                          const item = payload[0].payload as (typeof chartData)[0]
+
                           return (
                             <div className='rounded-lg border bg-background p-3 shadow-md'>
-                              <p className='font-medium'>{data.fullName}</p>
+                              <p className='font-medium'>{item.fullName}</p>
                               <p className='text-sm text-muted-foreground'>
-                                Calls: {data.count}
+                                {text('调用次数：', 'Calls:')} {item.count}
                               </p>
                               <p className='text-sm text-muted-foreground'>
-                                Average: {data.avgDuration}ms
+                                {text('平均耗时：', 'Avg duration:')} {item.avgDuration}ms
                               </p>
                             </div>
                           )
@@ -309,10 +329,7 @@ export function ToolsAnalytics() {
                         return null
                       }}
                     />
-                    <Bar
-                      dataKey='count'
-                      radius={[0, 4, 4, 0]}
-                    >
+                    <Bar dataKey='count' radius={[0, 4, 4, 0]}>
                       {chartData.map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
@@ -326,12 +343,11 @@ export function ToolsAnalytics() {
             </CardContent>
           </Card>
 
-          {/* Recent Tool Calls Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Tool Calls</CardTitle>
+              <CardTitle>{text('最近工具调用', 'Recent Tool Calls')}</CardTitle>
               <CardDescription>
-                Most recent tool calls (last 10)
+                {text('最近 10 条工具调用', 'Latest 10 tool calls')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -350,9 +366,9 @@ export function ToolsAnalytics() {
                 </div>
               ) : toolCalls.length === 0 ? (
                 <div className='flex flex-col items-center justify-center py-8'>
-                  <Activity className='h-12 w-12 text-muted-foreground mb-4' />
+                  <Activity className='mb-4 h-12 w-12 text-muted-foreground' />
                   <p className='text-muted-foreground'>
-                    No tool calls found
+                    {text('未找到工具调用', 'No tool calls found')}
                   </p>
                 </div>
               ) : (
@@ -360,10 +376,12 @@ export function ToolsAnalytics() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Tool</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className='text-right'>Duration</TableHead>
-                        <TableHead>Time</TableHead>
+                        <TableHead>{text('工具', 'Tool')}</TableHead>
+                        <TableHead>{text('状态', 'Status')}</TableHead>
+                        <TableHead className='text-right'>
+                          {text('耗时', 'Duration')}
+                        </TableHead>
+                        <TableHead>{text('时间', 'Time')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -393,19 +411,14 @@ export function ToolsAnalytics() {
                                       : 'text-muted-foreground'
                                 }`}
                               >
-                                {call.status ?? 'UNKNOWN'}
+                                {getStatusLabel(call.status, locale)}
                               </span>
                             </TableCell>
                             <TableCell className='text-right font-mono text-sm'>
-                              {call.duration_ms !== null
-                                ? `${call.duration_ms}ms`
-                                : '-'}
+                              {call.duration_ms !== null ? `${call.duration_ms}ms` : '-'}
                             </TableCell>
                             <TableCell className='text-sm text-muted-foreground'>
-                              {formatDistanceToNow(new Date(call.timestamp), {
-                                addSuffix: true,
-                                locale: enUS,
-                              })}
+                              {formatRelativeTime(call.timestamp, locale)}
                             </TableCell>
                           </TableRow>
                         )
@@ -418,45 +431,46 @@ export function ToolsAnalytics() {
           </Card>
         </div>
 
-        {/* Full Tool Calls Table with Pagination */}
         <Card className='mt-6'>
           <CardHeader>
-            <CardTitle>All Tool Calls</CardTitle>
+            <CardTitle>{text('全部工具调用', 'All Tool Calls')}</CardTitle>
             <CardDescription>
               {total > 0
-                ? `Showing ${startItem}-${endItem} of ${total} calls`
-                : 'No calls found'}
+                ? text(
+                    `显示第 ${startItem}-${endItem} 条，共 ${total} 次调用`,
+                    `Showing ${startItem}-${endItem} of ${total} calls`
+                  )
+                : text('未找到调用记录', 'No calls found')}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Search and Filter Controls */}
             <div className='mb-4 flex flex-col gap-4 sm:flex-row sm:items-center'>
-              <div className='relative flex-1 max-w-sm'>
+              <div className='relative max-w-sm flex-1'>
                 <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
                 <Input
-                  placeholder='Search by tool name...'
+                  placeholder={text('按工具名称搜索...', 'Search by tool name...')}
                   value={toolNameSearch}
                   onChange={(e) => {
                     setToolNameSearch(e.target.value)
-                    handleFilterChange()
+                    setPage(0)
                   }}
                   className='pl-8'
                 />
               </div>
               <Select
                 value={statusFilter}
-                onValueChange={(v) => {
-                  setStatusFilter(v)
-                  handleFilterChange()
+                onValueChange={(value) => {
+                  setStatusFilter(value)
+                  setPage(0)
                 }}
               >
-                <SelectTrigger className='w-[150px]'>
-                  <SelectValue placeholder='Filter by status' />
+                <SelectTrigger className='w-[170px]'>
+                  <SelectValue placeholder={text('按状态筛选', 'Filter by status')} />
                 </SelectTrigger>
                 <SelectContent>
                   {statusOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                      {text(option.zh, option.en)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -471,9 +485,9 @@ export function ToolsAnalytics() {
               </div>
             ) : toolCalls.length === 0 ? (
               <div className='flex flex-col items-center justify-center py-8'>
-                <Activity className='h-12 w-12 text-muted-foreground mb-4' />
+                <Activity className='mb-4 h-12 w-12 text-muted-foreground' />
                 <p className='text-muted-foreground'>
-                  No tool calls found
+                  {text('未找到调用记录', 'No tool calls found')}
                 </p>
               </div>
             ) : (
@@ -482,11 +496,13 @@ export function ToolsAnalytics() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Tool</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className='text-right'>Duration</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Agent</TableHead>
+                        <TableHead>{text('工具', 'Tool')}</TableHead>
+                        <TableHead>{text('状态', 'Status')}</TableHead>
+                        <TableHead className='text-right'>
+                          {text('耗时', 'Duration')}
+                        </TableHead>
+                        <TableHead>{text('时间', 'Time')}</TableHead>
+                        <TableHead>{text('代理', 'Agent')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -516,19 +532,14 @@ export function ToolsAnalytics() {
                                       : 'text-muted-foreground'
                                 }`}
                               >
-                                {call.status ?? 'UNKNOWN'}
+                                {getStatusLabel(call.status, locale)}
                               </span>
                             </TableCell>
                             <TableCell className='text-right font-mono text-sm'>
-                              {call.duration_ms !== null
-                                ? `${call.duration_ms}ms`
-                                : '-'}
+                              {call.duration_ms !== null ? `${call.duration_ms}ms` : '-'}
                             </TableCell>
                             <TableCell className='text-sm text-muted-foreground'>
-                              {formatDistanceToNow(new Date(call.timestamp), {
-                                addSuffix: true,
-                                locale: enUS,
-                              })}
+                              {formatRelativeTime(call.timestamp, locale)}
                             </TableCell>
                             <TableCell className='text-sm text-muted-foreground'>
                               {call.agent_id
@@ -544,30 +555,32 @@ export function ToolsAnalytics() {
                   </Table>
                 </div>
 
-                {/* Pagination Controls */}
                 <div className='mt-4 flex items-center justify-between'>
                   <p className='text-sm text-muted-foreground'>
-                    {total} total calls
+                    {text(`共 ${total} 次调用`, `${total} calls total`)}
                   </p>
                   <div className='flex items-center gap-2'>
                     <span className='text-sm text-muted-foreground'>
-                      Page {page + 1} of {Math.max(1, totalPages)}
+                      {text(
+                        `第 ${page + 1} 页 / 共 ${Math.max(1, totalPages)} 页`,
+                        `Page ${page + 1} / ${Math.max(1, totalPages)}`
+                      )}
                     </span>
                     <Button
                       variant='outline'
                       size='sm'
-                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      onClick={() => setPage((current) => Math.max(0, current - 1))}
                       disabled={page === 0}
                     >
-                      Previous
+                      {text('上一页', 'Previous')}
                     </Button>
                     <Button
                       variant='outline'
                       size='sm'
-                      onClick={() => setPage((p) => p + 1)}
+                      onClick={() => setPage((current) => current + 1)}
                       disabled={page >= totalPages - 1}
                     >
-                      Next
+                      {text('下一页', 'Next')}
                     </Button>
                   </div>
                 </div>

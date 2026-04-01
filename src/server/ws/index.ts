@@ -5,7 +5,8 @@ export type WsEventType =
   | 'costs:updated'
   | 'session:new'
   | 'alert:new'
-  | 'device:changed';
+  | 'device:changed'
+  | 'desktop:close-requested';
 
 export interface WsEvent {
   type: WsEventType;
@@ -69,6 +70,13 @@ export function broadcastDeviceChanged(deviceId: string): void {
   broadcast({
     type: 'device:changed',
     data: { deviceId },
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export function broadcastDesktopCloseRequested(): void {
+  broadcast({
+    type: 'desktop:close-requested',
     timestamp: new Date().toISOString(),
   });
 }

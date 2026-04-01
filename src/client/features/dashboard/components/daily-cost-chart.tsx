@@ -1,12 +1,13 @@
 import {
   Area,
   AreaChart,
+  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
 } from 'recharts'
+import { useLocale } from '@/context/locale-provider'
 import type { DailyCost } from '@/lib/api'
 
 interface DailyCostChartProps {
@@ -14,12 +15,15 @@ interface DailyCostChartProps {
 }
 
 export function DailyCostChart({ data }: DailyCostChartProps) {
+  const { locale, text } = useLocale()
+  const dateLocale = locale === 'zh' ? 'zh-CN' : 'en-US'
+
   const chartData = data.map((item) => ({
-    date: new Date(item.date).toLocaleDateString('en-US', {
+    date: new Date(item.date).toLocaleDateString(dateLocale, {
       month: 'short',
       day: 'numeric',
     }),
-    fullDate: new Date(item.date).toLocaleDateString('en-US', {
+    fullDate: new Date(item.date).toLocaleDateString(dateLocale, {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
@@ -33,7 +37,10 @@ export function DailyCostChart({ data }: DailyCostChartProps) {
   if (chartData.length === 0) {
     return (
       <div className='flex h-[300px] items-center justify-center text-muted-foreground'>
-        No data yet. Start using Claude Code to see your costs here.
+        {text(
+          '暂无数据。开始使用 Claude Code 后，这里会显示你的成本走势。',
+          'No data yet. Start using Claude Code to see your costs here.'
+        )}
       </div>
     )
   }
@@ -89,44 +96,47 @@ export function DailyCostChart({ data }: DailyCostChartProps) {
         <Tooltip
           content={({ active, payload }) => {
             if (active && payload && payload.length) {
-              const data = payload[0].payload as (typeof chartData)[0]
+              const tooltipData = payload[0].payload as (typeof chartData)[0]
+
               return (
                 <div className='rounded-lg border bg-background p-3 shadow-md'>
-                  <div className='mb-2 font-medium text-sm'>{data.fullDate}</div>
+                  <div className='mb-2 text-sm font-medium'>
+                    {tooltipData.fullDate}
+                  </div>
                   <div className='space-y-1.5'>
                     <div className='flex items-center justify-between gap-6'>
-                      <span className='text-xs text-muted-foreground flex items-center gap-2'>
+                      <span className='flex items-center gap-2 text-xs text-muted-foreground'>
                         <span className='h-2 w-2 rounded-full bg-red-500' />
-                        Cost
+                        {text('成本', 'Cost')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        ${data.cost.toFixed(4)}
-                      </span>
-                    </div>
-                    <div className='flex items-center justify-between gap-6'>
-                      <span className='text-xs text-muted-foreground'>
-                        Requests
-                      </span>
-                      <span className='font-mono font-medium text-sm'>
-                        {data.requests}
+                      <span className='font-mono text-sm font-medium'>
+                        ${tooltipData.cost.toFixed(4)}
                       </span>
                     </div>
                     <div className='flex items-center justify-between gap-6'>
                       <span className='text-xs text-muted-foreground'>
-                        Sessions
+                        {text('请求数', 'Requests')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        {data.sessions}
+                      <span className='font-mono text-sm font-medium'>
+                        {tooltipData.requests}
                       </span>
                     </div>
-                    {data.cacheSavings > 0 && (
+                    <div className='flex items-center justify-between gap-6'>
+                      <span className='text-xs text-muted-foreground'>
+                        {text('会话数', 'Sessions')}
+                      </span>
+                      <span className='font-mono text-sm font-medium'>
+                        {tooltipData.sessions}
+                      </span>
+                    </div>
+                    {tooltipData.cacheSavings > 0 && (
                       <div className='flex items-center justify-between gap-6 border-t pt-1.5'>
-                        <span className='text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2'>
+                        <span className='flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400'>
                           <span className='h-2 w-2 rounded-full bg-emerald-500' />
-                          Cache Savings
+                          {text('缓存节省', 'Cache Savings')}
                         </span>
-                        <span className='font-mono font-medium text-sm text-emerald-600 dark:text-emerald-400'>
-                          ${data.cacheSavings.toFixed(4)}
+                        <span className='font-mono text-sm font-medium text-emerald-600 dark:text-emerald-400'>
+                          ${tooltipData.cacheSavings.toFixed(4)}
                         </span>
                       </div>
                     )}
@@ -134,6 +144,7 @@ export function DailyCostChart({ data }: DailyCostChartProps) {
                 </div>
               )
             }
+
             return null
           }}
         />

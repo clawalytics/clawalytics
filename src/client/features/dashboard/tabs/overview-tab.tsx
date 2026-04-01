@@ -1,3 +1,5 @@
+import { ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -5,9 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowRight } from 'lucide-react'
+import { useLocale } from '@/context/locale-provider'
 import type { ModelUsage, TokenBreakdown } from '@/lib/api'
 import { ModelUsageChart } from '../components/model-usage-chart'
 import { TokenBreakdownCard } from '../components/token-breakdown-card'
@@ -28,13 +29,16 @@ export function OverviewTab({
   tokenBreakdownLoading,
   onSwitchTab,
 }: OverviewTabProps) {
+  const { text } = useLocale()
+
   return (
     <div className='grid grid-cols-1 gap-6 lg:grid-cols-7'>
-      {/* Model Usage Chart - Takes 3 columns */}
       <Card className='col-span-1 lg:col-span-3'>
         <CardHeader>
-          <CardTitle>Model Usage</CardTitle>
-          <CardDescription>Cost distribution by model</CardDescription>
+          <CardTitle>{text('模型使用情况', 'Model Usage')}</CardTitle>
+          <CardDescription>
+            {text('按模型查看成本分布', 'View cost distribution by model')}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {modelUsageLoading ? (
@@ -45,8 +49,7 @@ export function OverviewTab({
         </CardContent>
       </Card>
 
-      {/* Token Breakdown + Top Models - Takes 4 columns */}
-      <div className='col-span-1 lg:col-span-4 space-y-6'>
+      <div className='col-span-1 space-y-6 lg:col-span-4'>
         {tokenBreakdownLoading ? (
           <Card>
             <CardHeader>
@@ -64,8 +67,10 @@ export function OverviewTab({
         <Card>
           <CardHeader className='flex flex-row items-center justify-between'>
             <div>
-              <CardTitle>Top Models</CardTitle>
-              <CardDescription>Most used models by cost</CardDescription>
+              <CardTitle>{text('热门模型', 'Top Models')}</CardTitle>
+              <CardDescription>
+                {text('按成本排序的常用模型', 'Most-used models by cost')}
+              </CardDescription>
             </div>
             <Button
               variant='ghost'
@@ -73,7 +78,7 @@ export function OverviewTab({
               className='gap-1'
               onClick={() => onSwitchTab('models')}
             >
-              View all
+              {text('查看全部', 'View All')}
               <ArrowRight className='h-4 w-4' />
             </Button>
           </CardHeader>

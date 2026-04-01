@@ -1,6 +1,12 @@
-import { formatDistanceToNow, differenceInMinutes, differenceInHours } from 'date-fns'
-import { enUS } from 'date-fns/locale'
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, ChevronDown } from 'lucide-react'
+import { differenceInHours, differenceInMinutes } from 'date-fns'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -9,9 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { formatCurrency, formatNumber } from '@/lib/format'
+import {
+  useLocale,
+  type AppLocale,
+} from '@/context/locale-provider'
 import type { EnhancedSession } from '@/lib/api'
+import { formatCurrency, formatNumber } from '@/lib/format'
+import { formatDurationCompact, formatRelativeTime } from '@/lib/i18n'
 import { SessionDetailRow } from './session-detail-row'
 
 interface SessionsTableProps {
@@ -23,17 +33,26 @@ interface SessionsTableProps {
   onToggleExpand: (sessionId: string) => void
 }
 
-function formatProjectPath(path: string): string {
-  const parts = path.split('-')
-  return parts[parts.length - 1] || path
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
 }
 
-function getProjectInitials(path: string): string {
-  const name = formatProjectPath(path)
+function formatProjectPath(path: string | undefined, fallback: string): string {
+  const value = path?.trim()
+  if (!value) return fallback
+
+  const parts = value.split('-')
+  return parts[parts.length - 1] || value
+}
+
+function getProjectInitials(path: string | undefined, fallback: string): string {
+  const name = formatProjectPath(path, fallback)
   return name.substring(0, 2).toUpperCase()
 }
 
-function getModelShortName(model: string): string {
+function getModelShortName(model: string | undefined, fallback: string): string {
+  if (!isNonEmptyString(model)) return fallback
+
   if (model.includes('claude-opus-4')) return 'Opus 4'
   if (model.includes('claude-opus')) return 'Opus'
   if (model.includes('claude-sonnet-4')) return 'Sonnet 4'
@@ -45,7 +64,8 @@ function getModelShortName(model: string): string {
   return model.split('-')[0]
 }
 
-function getModelBadgeClass(model: string): string {
+function getModelBadgeClass(model: string | undefined): string {
+  if (!isNonEmptyString(model)) return 'border-gray-500/50'
   if (model.includes('opus')) return 'border-red-500/50 text-red-600 dark:text-red-400'
   if (model.includes('sonnet')) return 'border-rose-500/50 text-rose-600 dark:text-rose-400'
   if (model.includes('haiku')) return 'border-pink-500/50 text-pink-600 dark:text-pink-400'
@@ -53,17 +73,26 @@ function getModelBadgeClass(model: string): string {
   return 'border-gray-500/50'
 }
 
-function formatDuration(startedAt: string, lastActivity: string): string {
+function formatDuration(
+  startedAt: string,
+  lastActivity: string,
+  locale: AppLocale
+): string {
   const start = new Date(startedAt)
   const end = new Date(lastActivity)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '--'
+
   const hours = differenceInHours(end, start)
   const minutes = differenceInMinutes(end, start) % 60
-  if (hours > 0) return `${hours}h ${minutes}m`
-  if (minutes > 0) return `${minutes}m`
-  return '<1m'
+  return formatDurationCompact(hours, minutes, locale)
 }
 
-type SortableField = 'last_activity' | 'request_count' | 'total_input_tokens' | 'total_output_tokens' | 'total_cost'
+type SortableField =
+  | 'last_activity'
+  | 'request_count'
+  | 'total_input_tokens'
+  | 'total_output_tokens'
+  | 'total_cost'
 
 function SortableHeader({
   label,
@@ -103,13 +132,17 @@ export function SessionsTable({
   expandedSessionId,
   onToggleExpand,
 }: SessionsTableProps) {
+  const { locale, text } = useLocale()
   const maxCost = sessions.reduce((max, s) => Math.max(max, s.total_cost), 0)
 
   if (sessions.length === 0) {
     return (
       <div className='rounded-md border'>
         <div className='flex h-[200px] items-center justify-center text-muted-foreground'>
-          No sessions found matching your filters.
+          {text(
+            '没有匹配当前筛选条件的会话。',
+            'No sessions found matching your filters.'
+          )}
         </div>
       </div>
     )
@@ -121,13 +154,47 @@ export function SessionsTable({
         <TableHeader>
           <TableRow>
             <TableHead className='w-8' />
-            <TableHead>Project</TableHead>
-            <SortableHeader label='Last Activity' field='last_activity' sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <TableHead className='hidden md:table-cell'>Duration</TableHead>
-            <SortableHeader label='Requests' field='request_count' sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <SortableHeader label='Input' field='total_input_tokens' sortBy={sortBy} sortDir={sortDir} onSort={onSort} className='hidden sm:table-cell' />
-            <SortableHeader label='Output' field='total_output_tokens' sortBy={sortBy} sortDir={sortDir} onSort={onSort} className='hidden sm:table-cell' />
-            <SortableHeader label='Cost' field='total_cost' sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <TableHead>{text('项目', 'Project')}</TableHead>
+            <SortableHeader
+              label={text('最近活动', 'Last Activity')}
+              field='last_activity'
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+            <TableHead className='hidden md:table-cell'>
+              {text('持续时长', 'Duration')}
+            </TableHead>
+            <SortableHeader
+              label={text('请求数', 'Requests')}
+              field='request_count'
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+            <SortableHeader
+              label={text('输入', 'Input')}
+              field='total_input_tokens'
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+              className='hidden sm:table-cell'
+            />
+            <SortableHeader
+              label={text('输出', 'Output')}
+              field='total_output_tokens'
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+              className='hidden sm:table-cell'
+            />
+            <SortableHeader
+              label={text('成本', 'Cost')}
+              field='total_cost'
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -139,6 +206,8 @@ export function SessionsTable({
                 session={session}
                 isExpanded={isExpanded}
                 maxCost={maxCost}
+                locale={locale}
+                text={text}
                 onToggle={() => onToggleExpand(session.id)}
               />
             )
@@ -153,15 +222,25 @@ function SessionTableRow({
   session,
   isExpanded,
   maxCost,
+  locale,
+  text,
   onToggle,
 }: {
   session: EnhancedSession
   isExpanded: boolean
   maxCost: number
+  locale: AppLocale
+  text: (zh: string, en: string) => string
   onToggle: () => void
 }) {
-  const costPercent = maxCost > 0 ? (session.total_cost / maxCost) * 100 : 0
+  const cost = Number.isFinite(session.total_cost) ? session.total_cost : 0
+  const costPercent = maxCost > 0 ? (cost / maxCost) * 100 : 0
   const ChevronIcon = isExpanded ? ChevronDown : ChevronRight
+  const unknownProjectLabel = text('未知项目', 'Unknown Project')
+  const unknownModelLabel = text('未知模型', 'Unknown')
+  const modelsUsed = Array.isArray(session.models_used)
+    ? session.models_used.filter(isNonEmptyString)
+    : []
 
   return (
     <>
@@ -176,26 +255,31 @@ function SessionTableRow({
           <div className='flex items-center gap-3'>
             <div className='hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-rose-500 sm:flex'>
               <span className='text-xs font-medium text-white'>
-                {getProjectInitials(session.project_path)}
+                {getProjectInitials(session.project_path, unknownProjectLabel)}
               </span>
             </div>
             <div className='min-w-0'>
               <div className='font-medium truncate max-w-[120px] sm:max-w-[180px]'>
-                {formatProjectPath(session.project_path)}
+                {formatProjectPath(session.project_path, unknownProjectLabel)}
               </div>
               <div className='flex gap-1 mt-0.5 flex-wrap'>
-                {session.models_used.slice(0, 2).map((model) => (
+                {modelsUsed.slice(0, 2).map((model) => (
                   <Badge
                     key={model}
                     variant='outline'
                     className={`text-[10px] px-1 py-0 ${getModelBadgeClass(model)}`}
                   >
-                    {getModelShortName(model)}
+                    {getModelShortName(model, unknownModelLabel)}
                   </Badge>
                 ))}
-                {session.models_used.length > 2 && (
+                {modelsUsed.length === 0 && (
                   <Badge variant='outline' className='text-[10px] px-1 py-0'>
-                    +{session.models_used.length - 2}
+                    {unknownModelLabel}
+                  </Badge>
+                )}
+                {modelsUsed.length > 2 && (
+                  <Badge variant='outline' className='text-[10px] px-1 py-0'>
+                    +{modelsUsed.length - 2}
                   </Badge>
                 )}
               </div>
@@ -203,27 +287,24 @@ function SessionTableRow({
           </div>
         </TableCell>
         <TableCell className='py-2 text-muted-foreground text-sm'>
-          {formatDistanceToNow(new Date(session.last_activity), {
-            addSuffix: true,
-            locale: enUS,
-          })}
+          {formatRelativeTime(session.last_activity, locale)}
         </TableCell>
         <TableCell className='py-2 text-muted-foreground text-sm hidden md:table-cell'>
-          {formatDuration(session.started_at, session.last_activity)}
+          {formatDuration(session.started_at, session.last_activity, locale)}
         </TableCell>
         <TableCell className='py-2 font-mono text-sm text-right'>
-          {session.request_count}
+          {session.request_count ?? 0}
         </TableCell>
         <TableCell className='py-2 font-mono text-sm text-right hidden sm:table-cell'>
-          {formatNumber(session.total_input_tokens)}
+          {formatNumber(session.total_input_tokens ?? 0)}
         </TableCell>
         <TableCell className='py-2 font-mono text-sm text-right hidden sm:table-cell'>
-          {formatNumber(session.total_output_tokens)}
+          {formatNumber(session.total_output_tokens ?? 0)}
         </TableCell>
         <TableCell className='py-2'>
           <div className='flex items-center gap-2 justify-end'>
             <span className='font-mono text-sm font-medium'>
-              {formatCurrency(session.total_cost)}
+              {formatCurrency(cost)}
             </span>
             <div className='relative h-2 w-16 overflow-hidden rounded-full bg-muted'>
               <div

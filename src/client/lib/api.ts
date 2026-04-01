@@ -87,6 +87,16 @@ export interface Config {
   configPath?: string;
 }
 
+export interface DesktopPreferences {
+  locale: 'zh' | 'en';
+  closeAction: 'ask' | 'tray' | 'quit';
+  launchOnStartup: boolean;
+  startupMode: 'window' | 'tray';
+}
+
+export type DesktopCloseChoiceAction = 'tray' | 'quit' | 'cancel';
+export type DesktopStartupMode = DesktopPreferences['startupMode'];
+
 // API functions
 export async function getStats(): Promise<Stats> {
   const { data } = await api.get<Stats>('/stats');
@@ -218,6 +228,29 @@ export async function getConfig(): Promise<Config> {
 
 export async function updateConfig(config: Partial<Config>): Promise<Config> {
   const { data } = await api.post<Config>('/config', config);
+  return data;
+}
+
+export async function getDesktopPreferences(): Promise<DesktopPreferences> {
+  const { data } = await api.get<DesktopPreferences>('/desktop/preferences');
+  return data;
+}
+
+export async function updateDesktopPreferences(
+  updates: Partial<DesktopPreferences>
+): Promise<DesktopPreferences> {
+  const { data } = await api.post<DesktopPreferences>('/desktop/preferences', updates);
+  return data;
+}
+
+export async function submitDesktopCloseChoice(payload: {
+  action: DesktopCloseChoiceAction;
+  remember: boolean;
+}): Promise<DesktopPreferences> {
+  const { data } = await api.post<DesktopPreferences>(
+    '/desktop/window/close-choice',
+    payload
+  );
   return data;
 }
 

@@ -1,7 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
-type WsEventType = 'costs:updated' | 'session:new' | 'alert:new' | 'device:changed'
+type WsEventType =
+  | 'costs:updated'
+  | 'session:new'
+  | 'alert:new'
+  | 'device:changed'
+  | 'desktop:close-requested'
 
 interface WsMessage {
   type: WsEventType | 'connected'
@@ -11,6 +16,7 @@ interface WsMessage {
 
 const RECONNECT_DELAY = 3000
 const MAX_RECONNECT_DELAY = 30000
+export const DESKTOP_CLOSE_REQUESTED_EVENT = 'clawalytics:desktop-close-requested'
 
 export function useWebSocket() {
   const queryClient = useQueryClient()
@@ -103,6 +109,10 @@ function handleMessage(
     case 'device:changed':
       queryClient.invalidateQueries({ queryKey: ['devices'] })
       queryClient.invalidateQueries({ queryKey: ['securityDashboard'] })
+      break
+
+    case 'desktop:close-requested':
+      window.dispatchEvent(new CustomEvent(DESKTOP_CLOSE_REQUESTED_EVENT))
       break
   }
 }

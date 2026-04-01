@@ -5,13 +5,16 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar'
+import { useLocale } from '@/context/locale-provider'
 // import { AppTitle } from './app-title'
-import { sidebarData } from './data/sidebar-data'
+import { getSidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { TeamSwitcher } from './team-switcher'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
+  const { text } = useLocale()
+  const sidebarData = getSidebarData(text)
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
       <SidebarHeader>

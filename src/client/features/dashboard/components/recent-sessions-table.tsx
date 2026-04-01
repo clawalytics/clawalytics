@@ -1,5 +1,5 @@
-import { formatDistanceToNow, differenceInMinutes, differenceInHours } from 'date-fns'
-import { enUS } from 'date-fns/locale'
+import { differenceInHours, differenceInMinutes } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -8,15 +8,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { useLocale } from '@/context/locale-provider'
 import type { Session } from '@/lib/api'
+import { formatDurationCompact, formatRelativeTime } from '@/lib/i18n'
 
 interface RecentSessionsTableProps {
   sessions: Session[]
 }
 
 function formatProjectPath(path: string): string {
-  // Convert encoded path like "-Users-name-project" to "project"
   const parts = path.split('-')
   return parts[parts.length - 1] || path
 }
@@ -38,19 +38,17 @@ function getModelShortName(model: string): string {
   return model.split('-')[0]
 }
 
-function formatDuration(startedAt: string, lastActivity: string): string {
+function formatDuration(
+  startedAt: string,
+  lastActivity: string,
+  locale: 'zh' | 'en'
+): string {
   const start = new Date(startedAt)
   const end = new Date(lastActivity)
   const hours = differenceInHours(end, start)
   const minutes = differenceInMinutes(end, start) % 60
 
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`
-  }
-  if (minutes > 0) {
-    return `${minutes}m`
-  }
-  return '<1m'
+  return formatDurationCompact(hours, minutes, locale)
 }
 
 function formatTokens(input: number, output: number): string {
@@ -66,7 +64,6 @@ function formatCurrency(value: number): string {
   return `$${value.toFixed(4)}`
 }
 
-// Model badge color mapping (red/rose palette)
 function getModelBadgeClass(model: string): string {
   if (model.includes('opus')) return 'border-red-500/50 text-red-600 dark:text-red-400'
   if (model.includes('sonnet')) return 'border-rose-500/50 text-rose-600 dark:text-rose-400'
@@ -76,10 +73,15 @@ function getModelBadgeClass(model: string): string {
 }
 
 export function RecentSessionsTable({ sessions }: RecentSessionsTableProps) {
+  const { locale, text } = useLocale()
+
   if (sessions.length === 0) {
     return (
-      <div className='flex h-[200px] items-center justify-center text-muted-foreground text-center'>
-        No sessions yet. Start using Claude Code to see your sessions here.
+      <div className='flex h-[200px] items-center justify-center text-center text-muted-foreground'>
+        {text(
+          '暂无会话。开始使用 Claude Code 后，这里会显示会话记录。',
+          'No sessions yet. Start using Claude Code to see your sessions here.'
+        )}
       </div>
     )
   }
@@ -89,11 +91,15 @@ export function RecentSessionsTable({ sessions }: RecentSessionsTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Project</TableHead>
-            <TableHead className='hidden sm:table-cell'>Started</TableHead>
-            <TableHead className='hidden md:table-cell'>Duration</TableHead>
-            <TableHead className='text-right'>Tokens</TableHead>
-            <TableHead className='text-right'>Cost</TableHead>
+            <TableHead>{text('项目', 'Project')}</TableHead>
+            <TableHead className='hidden sm:table-cell'>
+              {text('开始时间', 'Started')}
+            </TableHead>
+            <TableHead className='hidden md:table-cell'>
+              {text('持续时间', 'Duration')}
+            </TableHead>
+            <TableHead className='text-right'>{text('Tokens', 'Tokens')}</TableHead>
+            <TableHead className='text-right'>{text('成本', 'Cost')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -107,24 +113,21 @@ export function RecentSessionsTable({ sessions }: RecentSessionsTableProps) {
                     </span>
                   </div>
                   <div className='min-w-0'>
-                    <div className='font-medium truncate max-w-[120px] sm:max-w-[180px]'>
+                    <div className='max-w-[120px] truncate font-medium sm:max-w-[180px]'>
                       {formatProjectPath(session.project_path)}
                     </div>
-                    <div className='flex gap-1 mt-1 flex-wrap'>
+                    <div className='mt-1 flex flex-wrap gap-1'>
                       {session.models_used.slice(0, 2).map((model) => (
                         <Badge
                           key={model}
                           variant='outline'
-                          className={`text-[10px] px-1 py-0 ${getModelBadgeClass(model)}`}
+                          className={`px-1 py-0 text-[10px] ${getModelBadgeClass(model)}`}
                         >
                           {getModelShortName(model)}
                         </Badge>
                       ))}
                       {session.models_used.length > 2 && (
-                        <Badge
-                          variant='outline'
-                          className='text-[10px] px-1 py-0'
-                        >
+                        <Badge variant='outline' className='px-1 py-0 text-[10px]'>
                           +{session.models_used.length - 2}
                         </Badge>
                       )}
@@ -132,14 +135,11 @@ export function RecentSessionsTable({ sessions }: RecentSessionsTableProps) {
                   </div>
                 </div>
               </TableCell>
-              <TableCell className='hidden sm:table-cell text-muted-foreground'>
-                {formatDistanceToNow(new Date(session.started_at), {
-                  addSuffix: true,
-                  locale: enUS,
-                })}
+              <TableCell className='hidden text-muted-foreground sm:table-cell'>
+                {formatRelativeTime(session.started_at, locale)}
               </TableCell>
-              <TableCell className='hidden md:table-cell text-muted-foreground'>
-                {formatDuration(session.started_at, session.last_activity)}
+              <TableCell className='hidden text-muted-foreground md:table-cell'>
+                {formatDuration(session.started_at, session.last_activity, locale)}
               </TableCell>
               <TableCell className='text-right font-mono text-sm'>
                 {formatTokens(

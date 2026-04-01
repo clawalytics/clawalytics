@@ -1,12 +1,10 @@
-import { formatDistanceToNow } from 'date-fns'
-import { enUS } from 'date-fns/locale'
 import {
-  Link,
-  Link2Off,
-  ShieldX,
-  ShieldCheck,
   Activity,
   Globe,
+  Link,
+  Link2Off,
+  ShieldCheck,
+  ShieldX,
 } from 'lucide-react'
 import {
   Card,
@@ -16,7 +14,9 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useLocale } from '@/context/locale-provider'
 import { type ConnectionEvent } from '@/lib/api'
+import { formatRelativeTime } from '@/lib/i18n'
 
 interface ConnectionsListProps {
   connections: ConnectionEvent[]
@@ -33,38 +33,44 @@ const eventTypeConfig: Record<
     iconBg: string
     textColor: string
     icon: typeof Link
-    label: string
+    zh: string
+    en: string
   }
 > = {
   connection: {
     iconBg: 'bg-emerald-500',
     textColor: 'text-emerald-500',
     icon: Link,
-    label: 'Connection',
+    zh: '连接',
+    en: 'Connection',
   },
   disconnection: {
     iconBg: 'bg-gray-500',
     textColor: 'text-gray-500',
     icon: Link2Off,
-    label: 'Disconnection',
+    zh: '断开',
+    en: 'Disconnection',
   },
   auth_failure: {
     iconBg: 'bg-red-500',
     textColor: 'text-red-500',
     icon: ShieldX,
-    label: 'Auth Failure',
+    zh: '认证失败',
+    en: 'Auth Failure',
   },
   auth_success: {
     iconBg: 'bg-blue-500',
     textColor: 'text-blue-500',
     icon: ShieldCheck,
-    label: 'Auth Success',
+    zh: '认证成功',
+    en: 'Auth Success',
   },
   heartbeat: {
     iconBg: 'bg-violet-500',
     textColor: 'text-violet-500',
     icon: Activity,
-    label: 'Heartbeat',
+    zh: '心跳',
+    en: 'Heartbeat',
   },
 }
 
@@ -72,15 +78,22 @@ const defaultEventConfig = {
   iconBg: 'bg-gray-500',
   textColor: 'text-gray-500',
   icon: Globe,
-  label: 'Unknown',
+  zh: '未知',
+  en: 'Unknown',
 }
 
 export function ConnectionsList({
   connections,
   isLoading,
-  title = 'Connection Events',
-  description = 'Recent connection activity',
+  title,
+  description,
 }: ConnectionsListProps) {
+  const { locale, text } = useLocale()
+
+  const resolvedTitle = title ?? text('连接事件', 'Connection Events')
+  const resolvedDescription =
+    description ?? text('最近连接活动', 'Recent connection activity')
+
   if (isLoading) {
     return (
       <Card>
@@ -91,7 +104,7 @@ export function ConnectionsList({
         <CardContent>
           <div className='space-y-3'>
             {[...Array(5)].map((_, i) => (
-              <div key={i} className='flex items-center gap-4 p-3 rounded-lg border'>
+              <div key={i} className='flex items-center gap-4 rounded-lg border p-3'>
                 <Skeleton className='h-8 w-8 rounded-full' />
                 <div className='flex-1 space-y-2'>
                   <Skeleton className='h-4 w-24' />
@@ -111,19 +124,19 @@ export function ConnectionsList({
       <CardHeader>
         <CardTitle className='flex items-center gap-2'>
           <Globe className='h-5 w-5' />
-          {title}
+          {resolvedTitle}
         </CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardDescription>{resolvedDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         {connections.length === 0 ? (
           <div className='flex flex-col items-center justify-center py-8 text-center'>
-            <Activity className='h-12 w-12 text-muted-foreground mb-4' />
+            <Activity className='mb-4 h-12 w-12 text-muted-foreground' />
             <p className='text-lg font-medium text-muted-foreground'>
-              No connection events
+              {text('暂无连接事件', 'No connection events')}
             </p>
             <p className='text-sm text-muted-foreground'>
-              No activity recorded yet
+              {text('还没有记录到相关活动', 'No activity recorded yet')}
             </p>
           </div>
         ) : (
@@ -136,7 +149,7 @@ export function ConnectionsList({
               return (
                 <div
                   key={connection.id}
-                  className='flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors'
+                  className='flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/50'
                 >
                   <div
                     className={`
@@ -146,35 +159,32 @@ export function ConnectionsList({
                   >
                     <IconComponent className='h-4 w-4 text-white' />
                   </div>
-                  <div className='flex-1 min-w-0'>
+                  <div className='min-w-0 flex-1'>
                     <div className='flex items-center gap-2'>
                       <span className={`font-jersey text-xs tracking-wider ${config.textColor}`}>
-                        {config.label}
+                        {locale === 'zh' ? config.zh : config.en}
                       </span>
                       {connection.device_id && (
-                        <span className='text-xs text-muted-foreground font-mono truncate'>
+                        <span className='truncate font-mono text-xs text-muted-foreground'>
                           {connection.device_id.slice(0, 8)}...
                         </span>
                       )}
                     </div>
-                    <div className='flex items-center gap-2 mt-1'>
+                    <div className='mt-1 flex items-center gap-2'>
                       {connection.ip_address && (
                         <span className='text-xs text-muted-foreground'>
                           IP: {connection.ip_address}
                         </span>
                       )}
                       {connection.details && (
-                        <span className='text-xs text-muted-foreground truncate'>
+                        <span className='truncate text-xs text-muted-foreground'>
                           {connection.details}
                         </span>
                       )}
                     </div>
                   </div>
-                  <span className='text-xs text-muted-foreground whitespace-nowrap'>
-                    {formatDistanceToNow(new Date(connection.timestamp), {
-                      addSuffix: true,
-                      locale: enUS,
-                    })}
+                  <span className='whitespace-nowrap text-xs text-muted-foreground'>
+                    {formatRelativeTime(connection.timestamp, locale)}
                   </span>
                 </div>
               )

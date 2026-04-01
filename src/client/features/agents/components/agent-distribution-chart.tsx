@@ -1,11 +1,12 @@
 import {
   Cell,
+  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
-  Legend,
 } from 'recharts'
+import { useLocale } from '@/context/locale-provider'
 import type { Agent } from '@/lib/api'
 
 interface AgentDistributionChartProps {
@@ -24,6 +25,7 @@ const COLORS = [
 export function AgentDistributionChart({
   agents,
 }: AgentDistributionChartProps) {
+  const { text } = useLocale()
   const totalCost = agents.reduce((acc, agent) => acc + agent.total_cost, 0)
 
   const chartData = agents
@@ -42,9 +44,11 @@ export function AgentDistributionChart({
 
   if (chartData.length === 0) {
     return (
-      <div className='flex h-[300px] items-center justify-center text-muted-foreground text-center px-4'>
-        No data available yet. The distribution will be displayed here once
-        agents are active.
+      <div className='flex h-[300px] items-center justify-center px-4 text-center text-muted-foreground'>
+        {text(
+          '暂无数据。代理活跃后，这里会显示成本分布。',
+          'No data yet. The distribution will appear once agents are active.'
+        )}
       </div>
     )
   }
@@ -71,49 +75,51 @@ export function AgentDistributionChart({
         <Tooltip
           content={({ active, payload }) => {
             if (active && payload && payload.length) {
-              const tooltipData = payload[0].payload as (typeof chartData)[0]
+              const item = payload[0].payload as (typeof chartData)[0]
+
               return (
-                <div className='rounded-lg border bg-background p-3 shadow-md min-w-[180px]'>
-                  <div className='mb-2 font-medium text-sm truncate max-w-[200px]'>
-                    {tooltipData.name}
+                <div className='min-w-[180px] rounded-lg border bg-background p-3 shadow-md'>
+                  <div className='mb-2 max-w-[200px] truncate text-sm font-medium'>
+                    {item.name}
                   </div>
                   <div className='space-y-1.5'>
                     <div className='flex items-center justify-between gap-4'>
                       <span className='text-xs text-muted-foreground'>
-                        Cost
+                        {text('成本', 'Cost')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        ${tooltipData.value.toFixed(4)}
-                      </span>
-                    </div>
-                    <div className='flex items-center justify-between gap-4'>
-                      <span className='text-xs text-muted-foreground'>
-                        Share
-                      </span>
-                      <span className='font-mono font-medium text-sm'>
-                        {tooltipData.percentage.toFixed(1)}%
+                      <span className='font-mono text-sm font-medium'>
+                        ${item.value.toFixed(4)}
                       </span>
                     </div>
                     <div className='flex items-center justify-between gap-4'>
                       <span className='text-xs text-muted-foreground'>
-                        Sessions
+                        {text('占比', 'Share')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        {tooltipData.sessions}
+                      <span className='font-mono text-sm font-medium'>
+                        {item.percentage.toFixed(1)}%
                       </span>
                     </div>
-                    <div className='flex items-center justify-between gap-4 text-xs text-muted-foreground border-t pt-1.5'>
+                    <div className='flex items-center justify-between gap-4'>
+                      <span className='text-xs text-muted-foreground'>
+                        {text('会话数', 'Sessions')}
+                      </span>
+                      <span className='font-mono text-sm font-medium'>
+                        {item.sessions}
+                      </span>
+                    </div>
+                    <div className='flex items-center justify-between gap-4 border-t pt-1.5 text-xs text-muted-foreground'>
                       <span>
-                        {(tooltipData.inputTokens / 1000).toFixed(1)}K in
+                        {(item.inputTokens / 1000).toFixed(1)}K {text('输入', 'in')}
                       </span>
                       <span>
-                        {(tooltipData.outputTokens / 1000).toFixed(1)}K out
+                        {(item.outputTokens / 1000).toFixed(1)}K {text('输出', 'out')}
                       </span>
                     </div>
                   </div>
                 </div>
               )
             }
+
             return null
           }}
         />

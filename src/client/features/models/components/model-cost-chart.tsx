@@ -1,12 +1,13 @@
 import {
   Area,
   AreaChart,
+  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
 } from 'recharts'
+import { useLocale } from '@/context/locale-provider'
 import type { ModelDailyUsage } from '@/lib/api'
 
 interface ModelCostChartProps {
@@ -14,7 +15,9 @@ interface ModelCostChartProps {
 }
 
 export function ModelCostChart({ data }: ModelCostChartProps) {
-  // Aggregate costs by date across all models
+  const { locale, text } = useLocale()
+  const dateLocale = locale === 'zh' ? 'zh-CN' : 'en-US'
+
   const aggregatedByDate = data.reduce(
     (acc, item) => {
       const existing = acc.get(item.date)
@@ -34,17 +37,26 @@ export function ModelCostChart({ data }: ModelCostChartProps) {
       }
       return acc
     },
-    new Map<string, { date: string; cost: number; inputTokens: number; outputTokens: number; requestCount: number }>()
+    new Map<
+      string,
+      {
+        date: string
+        cost: number
+        inputTokens: number
+        outputTokens: number
+        requestCount: number
+      }
+    >()
   )
 
   const chartData = Array.from(aggregatedByDate.values())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((item) => ({
-      date: new Date(item.date).toLocaleDateString('en-US', {
+      date: new Date(item.date).toLocaleDateString(dateLocale, {
         month: 'short',
         day: 'numeric',
       }),
-      fullDate: new Date(item.date).toLocaleDateString('en-US', {
+      fullDate: new Date(item.date).toLocaleDateString(dateLocale, {
         weekday: 'short',
         day: 'numeric',
         month: 'short',
@@ -58,17 +70,17 @@ export function ModelCostChart({ data }: ModelCostChartProps) {
   if (chartData.length === 0) {
     return (
       <div className='flex h-[300px] items-center justify-center text-muted-foreground'>
-        No data available yet. Costs will be displayed here once models are used.
+        {text(
+          '暂无数据。模型开始使用后，这里会显示成本走势。',
+          'No data yet. Costs will appear here once models are used.'
+        )}
       </div>
     )
   }
 
   return (
     <ResponsiveContainer width='100%' height={300}>
-      <AreaChart
-        data={chartData}
-        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-      >
+      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id='modelCostGradient' x1='0' y1='0' x2='0' y2='1'>
             <stop offset='5%' stopColor='#ef4444' stopOpacity={0.5} />
@@ -102,42 +114,42 @@ export function ModelCostChart({ data }: ModelCostChartProps) {
         <Tooltip
           content={({ active, payload }) => {
             if (active && payload && payload.length) {
-              const tooltipData = payload[0].payload as (typeof chartData)[0]
+              const item = payload[0].payload as (typeof chartData)[0]
+
               return (
                 <div className='rounded-lg border bg-background p-3 shadow-md'>
-                  <div className='mb-2 font-medium text-sm'>
-                    {tooltipData.fullDate}
-                  </div>
+                  <div className='mb-2 text-sm font-medium'>{item.fullDate}</div>
                   <div className='space-y-1.5'>
                     <div className='flex items-center justify-between gap-6'>
-                      <span className='text-xs text-muted-foreground flex items-center gap-2'>
+                      <span className='flex items-center gap-2 text-xs text-muted-foreground'>
                         <span className='h-2 w-2 rounded-full bg-red-500' />
-                        Cost
+                        {text('成本', 'Cost')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        ${tooltipData.cost.toFixed(4)}
+                      <span className='font-mono text-sm font-medium'>
+                        ${item.cost.toFixed(4)}
                       </span>
                     </div>
                     <div className='flex items-center justify-between gap-6'>
                       <span className='text-xs text-muted-foreground'>
-                        Requests
+                        {text('请求数', 'Requests')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        {tooltipData.requests}
+                      <span className='font-mono text-sm font-medium'>
+                        {item.requests}
                       </span>
                     </div>
                     <div className='flex items-center justify-between gap-6 border-t pt-1.5 text-xs text-muted-foreground'>
                       <span>
-                        {(tooltipData.inputTokens / 1000).toFixed(1)}K in
+                        {(item.inputTokens / 1000).toFixed(1)}K {text('输入', 'in')}
                       </span>
                       <span>
-                        {(tooltipData.outputTokens / 1000).toFixed(1)}K out
+                        {(item.outputTokens / 1000).toFixed(1)}K {text('输出', 'out')}
                       </span>
                     </div>
                   </div>
                 </div>
               )
             }
+
             return null
           }}
         />

@@ -1,14 +1,19 @@
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  DollarSign,
+  Activity,
   Coins,
   Database,
-  Activity,
-  TrendingUp,
+  DollarSign,
   Download,
+  TrendingUp,
 } from 'lucide-react'
 import { HomeIcon } from '@/components/icons/home-icon'
+import { Header } from '@/components/layout/header'
+import { Main } from '@/components/layout/main'
+import { LanguageSwitch } from '@/components/language-switch'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -16,7 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
@@ -24,27 +28,27 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ThemeSwitch } from '@/components/theme-switch'
-import { formatCurrency, formatNumber } from '@/lib/format'
+import { useLocale } from '@/context/locale-provider'
 import {
-  getEnhancedStats,
+  getBudgetStatus,
   getDailyCosts,
+  getEnhancedStats,
   getModelUsage,
   getTokenBreakdown,
-  getBudgetStatus,
   type BudgetPeriod,
 } from '@/lib/api'
+import { formatCurrency, formatNumber } from '@/lib/format'
 import { DailyCostChart } from './components/daily-cost-chart'
-import { OverviewTab } from './tabs/overview-tab'
-import { ModelsTab } from './tabs/models-tab'
 import { AgentsTab } from './tabs/agents-tab'
 import { ChannelsTab } from './tabs/channels-tab'
+import { ModelsTab } from './tabs/models-tab'
+import { OverviewTab } from './tabs/overview-tab'
 
 export function Dashboard() {
+  const { locale, text } = useLocale()
   const [activeTab, setActiveTab] = useState('overview')
   const visitedTabs = useRef(new Set(['overview']))
+  const numberLocale = locale === 'zh' ? 'zh-CN' : 'en-US'
 
   const handleTabChange = (tab: string) => {
     visitedTabs.current.add(tab)
@@ -95,9 +99,12 @@ export function Dashboard() {
       <Header>
         <div className='flex items-center gap-2'>
           <HomeIcon active className='h-6 w-6' />
-          <span className='font-jersey text-xl'>Dashboard</span>
+          <span className='font-jersey text-xl'>
+            {text('仪表盘', 'Dashboard')}
+          </span>
         </div>
         <div className='ms-auto flex items-center space-x-4'>
+          <LanguageSwitch />
           <ThemeSwitch />
         </div>
       </Header>
@@ -105,9 +112,14 @@ export function Dashboard() {
       <Main>
         <div className='mb-6 flex items-center justify-between'>
           <div>
-            <h1 className='text-3xl font-bold tracking-tight'>Overview</h1>
+            <h1 className='text-3xl font-bold tracking-tight'>
+              {text('概览', 'Overview')}
+            </h1>
             <p className='text-muted-foreground'>
-              Your cost analytics at a glance
+              {text(
+                '一眼掌握你的成本分析概况',
+                'Your cost analytics at a glance'
+              )}
             </p>
           </div>
           <Button
@@ -116,16 +128,17 @@ export function Dashboard() {
             onClick={() => window.open('/api/export/costs?format=csv', '_blank')}
           >
             <Download className='mr-2 h-4 w-4' />
-            Export CSV
+            {text('导出 CSV', 'Export CSV')}
           </Button>
         </div>
 
-        {/* Stats Cards Row */}
-        <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6'>
+        <div className='mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
           <Card className='relative overflow-hidden'>
-            <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full' />
+            <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-red-500/10 to-transparent' />
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>Total Cost</CardTitle>
+              <CardTitle className='text-sm font-medium'>
+                {text('总成本', 'Total Cost')}
+              </CardTitle>
               <div className='rounded-full bg-red-500/10 p-2'>
                 <DollarSign className='h-4 w-4 text-red-500' />
               </div>
@@ -133,7 +146,7 @@ export function Dashboard() {
             <CardContent>
               {statsLoading ? (
                 <>
-                  <Skeleton className='h-8 w-24 mb-1' />
+                  <Skeleton className='mb-1 h-8 w-24' />
                   <Skeleton className='h-4 w-32' />
                 </>
               ) : (
@@ -142,7 +155,7 @@ export function Dashboard() {
                     {formatCurrency(stats?.totalCost ?? 0)}
                   </div>
                   <p className='text-xs text-muted-foreground'>
-                    {formatCurrency(stats?.monthCost ?? 0)} this month
+                    {text('本月', 'This month')} {formatCurrency(stats?.monthCost ?? 0)}
                   </p>
                 </>
               )}
@@ -150,9 +163,11 @@ export function Dashboard() {
           </Card>
 
           <Card className='relative overflow-hidden'>
-            <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-rose-500/10 to-transparent rounded-bl-full' />
+            <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-rose-500/10 to-transparent' />
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>Total Tokens</CardTitle>
+              <CardTitle className='text-sm font-medium'>
+                {text('总 Token 数', 'Total Tokens')}
+              </CardTitle>
               <div className='rounded-full bg-rose-500/10 p-2'>
                 <Coins className='h-4 w-4 text-rose-500' />
               </div>
@@ -160,49 +175,59 @@ export function Dashboard() {
             <CardContent>
               {statsLoading ? (
                 <>
-                  <Skeleton className='h-8 w-24 mb-1' />
+                  <Skeleton className='mb-1 h-8 w-24' />
                   <Skeleton className='h-4 w-32' />
                 </>
               ) : (
                 <>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className='text-2xl font-bold cursor-help text-rose-600 dark:text-rose-400'>
+                      <div className='cursor-help text-2xl font-bold text-rose-600 dark:text-rose-400'>
                         {formatNumber(totalTokens)}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side='bottom' className='text-sm'>
                       <div className='space-y-1'>
                         <div className='flex justify-between gap-4'>
-                          <span>Input:</span>
+                          <span>{text('输入：', 'In:')}</span>
                           <span className='font-mono'>
-                            {stats?.totalTokens.input.toLocaleString()}
+                            {(stats?.totalTokens.input ?? 0).toLocaleString(
+                              numberLocale
+                            )}
                           </span>
                         </div>
                         <div className='flex justify-between gap-4'>
-                          <span>Output:</span>
+                          <span>{text('输出：', 'Out:')}</span>
                           <span className='font-mono'>
-                            {stats?.totalTokens.output.toLocaleString()}
+                            {(stats?.totalTokens.output ?? 0).toLocaleString(
+                              numberLocale
+                            )}
                           </span>
                         </div>
                         <div className='flex justify-between gap-4'>
-                          <span>Cache (read):</span>
+                          <span>{text('缓存读取：', 'Cache Read:')}</span>
                           <span className='font-mono'>
-                            {stats?.totalTokens.cacheRead.toLocaleString()}
+                            {(stats?.totalTokens.cacheRead ?? 0).toLocaleString(
+                              numberLocale
+                            )}
                           </span>
                         </div>
                         <div className='flex justify-between gap-4'>
-                          <span>Cache (write):</span>
+                          <span>{text('缓存写入：', 'Cache Write:')}</span>
                           <span className='font-mono'>
-                            {stats?.totalTokens.cacheCreation.toLocaleString()}
+                            {(
+                              stats?.totalTokens.cacheCreation ?? 0
+                            ).toLocaleString(numberLocale)}
                           </span>
                         </div>
                       </div>
                     </TooltipContent>
                   </Tooltip>
                   <p className='text-xs text-muted-foreground'>
-                    {formatNumber(stats?.totalTokens.input ?? 0)} in /{' '}
-                    {formatNumber(stats?.totalTokens.output ?? 0)} out
+                    {text(
+                      `输入 ${formatNumber(stats?.totalTokens.input ?? 0)} / 输出 ${formatNumber(stats?.totalTokens.output ?? 0)}`,
+                      `In ${formatNumber(stats?.totalTokens.input ?? 0)} / Out ${formatNumber(stats?.totalTokens.output ?? 0)}`
+                    )}
                   </p>
                 </>
               )}
@@ -210,9 +235,11 @@ export function Dashboard() {
           </Card>
 
           <Card className='relative overflow-hidden'>
-            <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full' />
+            <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-red-500/10 to-transparent' />
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>Cache Savings</CardTitle>
+              <CardTitle className='text-sm font-medium'>
+                {text('缓存节省', 'Cache Savings')}
+              </CardTitle>
               <div className='rounded-full bg-red-500/10 p-2'>
                 <Database className='h-4 w-4 text-red-500' />
               </div>
@@ -220,7 +247,7 @@ export function Dashboard() {
             <CardContent>
               {statsLoading ? (
                 <>
-                  <Skeleton className='h-8 w-24 mb-1' />
+                  <Skeleton className='mb-1 h-8 w-24' />
                   <Skeleton className='h-4 w-32' />
                 </>
               ) : (
@@ -228,16 +255,20 @@ export function Dashboard() {
                   <div className='text-2xl font-bold text-red-600 dark:text-red-400'>
                     {formatCurrency(stats?.cacheSavings ?? 0)}
                   </div>
-                  <p className='text-xs text-muted-foreground'>Saved via prompt caching</p>
+                  <p className='text-xs text-muted-foreground'>
+                    {text('通过提示缓存节省', 'Saved via prompt caching')}
+                  </p>
                 </>
               )}
             </CardContent>
           </Card>
 
           <Card className='relative overflow-hidden'>
-            <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full' />
+            <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-red-500/10 to-transparent' />
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>Active Sessions</CardTitle>
+              <CardTitle className='text-sm font-medium'>
+                {text('活跃会话', 'Active Sessions')}
+              </CardTitle>
               <div className='rounded-full bg-red-500/10 p-2'>
                 <Activity className='h-4 w-4 text-red-500' />
               </div>
@@ -245,7 +276,7 @@ export function Dashboard() {
             <CardContent>
               {statsLoading ? (
                 <>
-                  <Skeleton className='h-8 w-16 mb-1' />
+                  <Skeleton className='mb-1 h-8 w-16' />
                   <Skeleton className='h-4 w-24' />
                 </>
               ) : (
@@ -253,36 +284,51 @@ export function Dashboard() {
                   <div className='text-2xl font-bold text-red-600 dark:text-red-400'>
                     {stats?.activeSessionsThisMonth ?? 0}
                   </div>
-                  <p className='text-xs text-muted-foreground'>This month</p>
+                  <p className='text-xs text-muted-foreground'>
+                    {text('本月', 'This month')}
+                  </p>
                 </>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Budget Progress */}
-        {budgetStatus && (budgetStatus.daily || budgetStatus.weekly || budgetStatus.monthly) && (
-          <div className='grid gap-4 sm:grid-cols-3 mb-6'>
-            {budgetStatus.daily && (
-              <BudgetBar label='Daily Budget' period={budgetStatus.daily} />
-            )}
-            {budgetStatus.weekly && (
-              <BudgetBar label='Weekly Budget' period={budgetStatus.weekly} />
-            )}
-            {budgetStatus.monthly && (
-              <BudgetBar label='Monthly Budget' period={budgetStatus.monthly} />
-            )}
-          </div>
-        )}
+        {budgetStatus &&
+          (budgetStatus.daily || budgetStatus.weekly || budgetStatus.monthly) && (
+            <div className='mb-6 grid gap-4 sm:grid-cols-3'>
+              {budgetStatus.daily && (
+                <BudgetBar
+                  label={text('日预算', 'Daily Budget')}
+                  period={budgetStatus.daily}
+                />
+              )}
+              {budgetStatus.weekly && (
+                <BudgetBar
+                  label={text('周预算', 'Weekly Budget')}
+                  period={budgetStatus.weekly}
+                />
+              )}
+              {budgetStatus.monthly && (
+                <BudgetBar
+                  label={text('月预算', 'Monthly Budget')}
+                  period={budgetStatus.monthly}
+                />
+              )}
+            </div>
+          )}
 
-        {/* Daily Cost Chart (always visible, above tabs) */}
         <Card className='mb-6'>
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <TrendingUp className='h-5 w-5' />
-              Daily Costs
+              {text('每日成本', 'Daily Cost')}
             </CardTitle>
-            <CardDescription>Your spending over the last 30 days</CardDescription>
+            <CardDescription>
+              {text(
+                '最近 30 天的花费趋势',
+                'Cost trend over the last 30 days'
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent className='ps-2'>
             {dailyCostsLoading ? (
@@ -293,13 +339,12 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Tabbed Breakdown */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList>
-            <TabsTrigger value='overview'>Overview</TabsTrigger>
-            <TabsTrigger value='models'>Models</TabsTrigger>
-            <TabsTrigger value='agents'>Agents</TabsTrigger>
-            <TabsTrigger value='channels'>Channels</TabsTrigger>
+            <TabsTrigger value='overview'>{text('概览', 'Overview')}</TabsTrigger>
+            <TabsTrigger value='models'>{text('模型', 'Models')}</TabsTrigger>
+            <TabsTrigger value='agents'>{text('代理', 'Agents')}</TabsTrigger>
+            <TabsTrigger value='channels'>{text('渠道', 'Channels')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value='overview'>
@@ -336,6 +381,8 @@ function BudgetBar({
   label: string
   period: BudgetPeriod
 }) {
+  const { text } = useLocale()
+
   const color =
     period.percent >= 90
       ? 'bg-red-500'
@@ -352,7 +399,7 @@ function BudgetBar({
 
   return (
     <Card className='p-4'>
-      <div className='flex items-center justify-between mb-2'>
+      <div className='mb-2 flex items-center justify-between'>
         <span className='text-sm font-medium'>{label}</span>
         <span className={`text-sm font-semibold ${textColor}`}>
           {formatCurrency(period.spent)} / {formatCurrency(period.budget)}
@@ -364,8 +411,11 @@ function BudgetBar({
           style={{ width: `${Math.min(100, period.percent)}%` }}
         />
       </div>
-      <p className='text-xs text-muted-foreground mt-1'>
-        {period.percent.toFixed(0)}% used
+      <p className='mt-1 text-xs text-muted-foreground'>
+        {text(
+          `已使用 ${period.percent.toFixed(0)}%`,
+          `Used ${period.percent.toFixed(0)}%`
+        )}
       </p>
     </Card>
   )

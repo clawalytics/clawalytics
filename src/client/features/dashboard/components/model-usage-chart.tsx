@@ -1,20 +1,20 @@
-import { Treemap, ResponsiveContainer, Tooltip } from 'recharts'
+import { ResponsiveContainer, Tooltip, Treemap } from 'recharts'
+import { useLocale } from '@/context/locale-provider'
 import type { ModelUsage } from '@/lib/api'
 
 interface ModelUsageChartProps {
   data: ModelUsage[]
 }
 
-// Red/rose-focused color palette matching Clawalytics branding
 const COLORS = [
-  '#dc2626', // Red 600
-  '#2563eb', // Blue 600
-  '#d946ef', // Fuchsia 500
-  '#f59e0b', // Amber 500
-  '#10b981', // Emerald 500
-  '#8b5cf6', // Violet 500
-  '#f43f5e', // Rose 500
-  '#06b6d4', // Cyan 500
+  '#dc2626',
+  '#2563eb',
+  '#d946ef',
+  '#f59e0b',
+  '#10b981',
+  '#8b5cf6',
+  '#f43f5e',
+  '#06b6d4',
 ]
 
 function getModelShortName(model: string): string {
@@ -42,7 +42,15 @@ interface TreemapContentProps {
   fill: string
 }
 
-function CustomTreemapContent({ x, y, width, height, name, percentage, fill }: TreemapContentProps) {
+function CustomTreemapContent({
+  x,
+  y,
+  width,
+  height,
+  name,
+  percentage,
+  fill,
+}: TreemapContentProps) {
   const showLabel = width > 40 && height > 30
 
   return (
@@ -56,7 +64,7 @@ function CustomTreemapContent({ x, y, width, height, name, percentage, fill }: T
         stroke='hsl(var(--background))'
         strokeWidth={3}
         rx={4}
-        className='hover:opacity-80 transition-opacity cursor-pointer'
+        className='cursor-pointer transition-opacity hover:opacity-80'
       />
       {showLabel && (
         <>
@@ -90,6 +98,7 @@ function CustomTreemapContent({ x, y, width, height, name, percentage, fill }: T
 }
 
 export function ModelUsageChart({ data }: ModelUsageChartProps) {
+  const { text } = useLocale()
   const totalCost = data.reduce((acc, item) => acc + item.cost, 0)
 
   const chartData = data
@@ -108,8 +117,11 @@ export function ModelUsageChart({ data }: ModelUsageChartProps) {
 
   if (chartData.length === 0) {
     return (
-      <div className='flex h-[300px] items-center justify-center text-muted-foreground text-center px-4'>
-        No data yet. Start using Claude Code to see your model usage here.
+      <div className='flex h-[300px] items-center justify-center px-4 text-center text-muted-foreground'>
+        {text(
+          '暂无数据。开始使用 Claude Code 后，这里会显示模型使用情况。',
+          'No data yet. Start using Claude Code to see your model usage here.'
+        )}
       </div>
     )
   }
@@ -120,58 +132,70 @@ export function ModelUsageChart({ data }: ModelUsageChartProps) {
         data={chartData}
         dataKey='size'
         aspectRatio={4 / 3}
-        content={<CustomTreemapContent x={0} y={0} width={0} height={0} name='' percentage={0} fill='' />}
+        content={
+          <CustomTreemapContent
+            x={0}
+            y={0}
+            width={0}
+            height={0}
+            name=''
+            percentage={0}
+            fill=''
+          />
+        }
       >
         <Tooltip
           content={({ active, payload }) => {
             if (active && payload && payload.length) {
-              const data = payload[0].payload as (typeof chartData)[0]
+              const item = payload[0].payload as (typeof chartData)[0]
+
               return (
-                <div className='rounded-lg border bg-background p-3 shadow-md min-w-[180px]'>
-                  <div className='mb-2 font-medium text-sm truncate max-w-[200px] flex items-center gap-2'>
+                <div className='min-w-[180px] rounded-lg border bg-background p-3 shadow-md'>
+                  <div className='mb-2 flex max-w-[200px] items-center gap-2 truncate text-sm font-medium'>
                     <span
-                      className='h-3 w-3 rounded shrink-0'
-                      style={{ backgroundColor: data.fill }}
+                      className='h-3 w-3 shrink-0 rounded'
+                      style={{ backgroundColor: item.fill }}
                     />
-                    {data.fullName}
+                    {item.fullName}
                   </div>
                   <div className='space-y-1.5'>
                     <div className='flex items-center justify-between gap-4'>
                       <span className='text-xs text-muted-foreground'>
-                        Cost
+                        {text('成本', 'Cost')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        ${data.size.toFixed(4)}
-                      </span>
-                    </div>
-                    <div className='flex items-center justify-between gap-4'>
-                      <span className='text-xs text-muted-foreground'>
-                        Share
-                      </span>
-                      <span className='font-mono font-medium text-sm'>
-                        {data.percentage.toFixed(1)}%
+                      <span className='font-mono text-sm font-medium'>
+                        ${item.size.toFixed(4)}
                       </span>
                     </div>
                     <div className='flex items-center justify-between gap-4'>
                       <span className='text-xs text-muted-foreground'>
-                        Requests
+                        {text('占比', 'Share')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        {data.requests}
+                      <span className='font-mono text-sm font-medium'>
+                        {item.percentage.toFixed(1)}%
                       </span>
                     </div>
-                    <div className='flex items-center justify-between gap-4 text-xs text-muted-foreground border-t pt-1.5'>
+                    <div className='flex items-center justify-between gap-4'>
+                      <span className='text-xs text-muted-foreground'>
+                        {text('请求数', 'Requests')}
+                      </span>
+                      <span className='font-mono text-sm font-medium'>
+                        {item.requests}
+                      </span>
+                    </div>
+                    <div className='flex items-center justify-between gap-4 border-t pt-1.5 text-xs text-muted-foreground'>
                       <span>
-                        {(data.inputTokens / 1000).toFixed(1)}K in
+                        {(item.inputTokens / 1000).toFixed(1)}K {text('输入', 'in')}
                       </span>
                       <span>
-                        {(data.outputTokens / 1000).toFixed(1)}K out
+                        {(item.outputTokens / 1000).toFixed(1)}K {text('输出', 'out')}
                       </span>
                     </div>
                   </div>
                 </div>
               )
             }
+
             return null
           }}
         />

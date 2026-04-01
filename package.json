@@ -1,6 +1,6 @@
 {
   "name": "clawalytics",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Cost-tracking analytics dashboard for OpenClaw - track AI spending across 100+ models, monitor agents, analyze channels, and manage security",
   "author": "David Novotny",
   "license": "MIT",
@@ -20,16 +20,18 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "dev": "concurrently \"pnpm dev:client\" \"pnpm dev:server\"",
+    "dev": "concurrently \"corepack pnpm dev:client\" \"corepack pnpm dev:server\"",
     "dev:client": "vite",
     "dev:server": "tsx watch src/server/index.ts",
-    "build": "pnpm build:client && pnpm build:server",
+    "dev:desktop": "corepack pnpm build && node scripts/run-electron-builder.mjs install-app-deps && electron electron/main.mjs",
+    "build": "corepack pnpm build:client && corepack pnpm build:server",
     "build:client": "tsc -b && vite build",
     "build:server": "tsc -p tsconfig.server.json",
+    "build:desktop": "corepack pnpm build && node scripts/run-electron-builder.mjs install-app-deps && node scripts/run-electron-builder.mjs --win portable nsis",
     "start": "NODE_ENV=production node dist/server/index.js",
     "postinstall": "node scripts/postinstall.js",
     "preuninstall": "node scripts/preuninstall.js",
-    "prepublishOnly": "pnpm build",
+    "prepublishOnly": "corepack pnpm build",
     "lint": "eslint .",
     "preview": "vite preview",
     "format:check": "prettier --check .",
@@ -104,6 +106,8 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "concurrently": "^9.1.2",
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.25",
@@ -140,8 +144,49 @@
   "bugs": {
     "url": "https://github.com/clawalytics/clawalytics/issues"
   },
+  "build": {
+    "appId": "com.clawalytics.desktop",
+    "productName": "Clawalytics",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/images/**/*"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.mjs"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "npmRebuild": true,
+    "win": {
+      "icon": "public/images/app-icon.ico",
+      "signAndEditExecutable": false,
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-win-x64-portable.${ext}"
+    },
+    "nsis": {
+      "artifactName": "${productName}-${version}-win-x64-setup.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "electron",
+      "electron-winstaller",
       "better-sqlite3",
       "esbuild",
       "@swc/core"

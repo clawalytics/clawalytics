@@ -1,7 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { formatDistanceToNow } from 'date-fns'
-import { enUS } from 'date-fns/locale'
-import { AlertTriangle, CheckCircle, Bell, ShieldAlert, Info } from 'lucide-react'
+import {
+  AlertTriangle,
+  Bell,
+  CheckCircle,
+  Info,
+  ShieldAlert,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -11,12 +15,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { toast } from 'sonner'
+import { useLocale } from '@/context/locale-provider'
 import {
-  type SecurityAlert,
   acknowledgeAlert,
   acknowledgeAllAlerts,
+  type SecurityAlert,
 } from '@/lib/api'
+import { formatRelativeTime } from '@/lib/i18n'
+import { toast } from 'sonner'
 
 interface AlertsListProps {
   alerts: SecurityAlert[]
@@ -31,25 +37,29 @@ const severityConfig = {
     iconBg: 'bg-red-500',
     textColor: 'text-red-500',
     icon: ShieldAlert,
-    label: 'CRITICAL',
+    zh: '严重',
+    en: 'Critical',
   },
   high: {
     iconBg: 'bg-orange-500',
     textColor: 'text-orange-500',
     icon: AlertTriangle,
-    label: 'HIGH',
+    zh: '高',
+    en: 'High',
   },
   medium: {
     iconBg: 'bg-yellow-500',
     textColor: 'text-yellow-500',
     icon: Bell,
-    label: 'MEDIUM',
+    zh: '中',
+    en: 'Medium',
   },
   low: {
     iconBg: 'bg-gray-500',
     textColor: 'text-gray-500',
     icon: Info,
-    label: 'LOW',
+    zh: '低',
+    en: 'Low',
   },
 } as const
 
@@ -58,6 +68,7 @@ export function AlertsList({
   isLoading,
   showAcknowledgeAll = true,
 }: AlertsListProps) {
+  const { locale, text } = useLocale()
   const queryClient = useQueryClient()
 
   const acknowledgeMutation = useMutation({
@@ -65,10 +76,10 @@ export function AlertsList({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['securityAlerts'] })
       queryClient.invalidateQueries({ queryKey: ['securityDashboard'] })
-      toast.success('Alert acknowledged')
+      toast.success(text('告警已确认', 'Alert acknowledged'))
     },
     onError: () => {
-      toast.error('Failed to acknowledge alert')
+      toast.error(text('确认告警失败', 'Failed to acknowledge alert'))
     },
   })
 
@@ -77,20 +88,14 @@ export function AlertsList({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['securityAlerts'] })
       queryClient.invalidateQueries({ queryKey: ['securityDashboard'] })
-      toast.success(`${data.count} alerts acknowledged`)
+      toast.success(
+        text(`已确认 ${data.count} 条告警`, `${data.count} alerts acknowledged`)
+      )
     },
     onError: () => {
-      toast.error('Failed to acknowledge alerts')
+      toast.error(text('批量确认告警失败', 'Failed to acknowledge alerts'))
     },
   })
-
-  const handleAcknowledge = (id: number) => {
-    acknowledgeMutation.mutate(id)
-  }
-
-  const handleAcknowledgeAll = () => {
-    acknowledgeAllMutation.mutate()
-  }
 
   if (isLoading) {
     return (
@@ -102,7 +107,7 @@ export function AlertsList({
         <CardContent>
           <div className='space-y-4'>
             {[...Array(3)].map((_, i) => (
-              <div key={i} className='flex items-start gap-4 p-4 rounded-lg border'>
+              <div key={i} className='flex items-start gap-4 rounded-lg border p-4'>
                 <Skeleton className='h-10 w-10 rounded-full' />
                 <div className='flex-1 space-y-2'>
                   <Skeleton className='h-4 w-32' />
@@ -118,7 +123,7 @@ export function AlertsList({
     )
   }
 
-  const unacknowledgedAlerts = alerts.filter((a) => !a.acknowledged)
+  const unacknowledgedAlerts = alerts.filter((alert) => !alert.acknowledged)
 
   return (
     <Card>
@@ -126,35 +131,38 @@ export function AlertsList({
         <div>
           <CardTitle className='flex items-center gap-2'>
             <AlertTriangle className='h-5 w-5' />
-            Security Alerts
+            {text('安全告警', 'Security Alerts')}
           </CardTitle>
           <CardDescription>
             {unacknowledgedAlerts.length > 0
-              ? `${unacknowledgedAlerts.length} unacknowledged alerts`
-              : 'No unacknowledged alerts'}
+              ? text(
+                  `${unacknowledgedAlerts.length} 条未确认告警`,
+                  `${unacknowledgedAlerts.length} unacknowledged alerts`
+                )
+              : text('没有未确认告警', 'No unacknowledged alerts')}
           </CardDescription>
         </div>
         {showAcknowledgeAll && unacknowledgedAlerts.length > 1 && (
           <Button
             variant='outline'
             size='sm'
-            onClick={handleAcknowledgeAll}
+            onClick={() => acknowledgeAllMutation.mutate()}
             disabled={acknowledgeAllMutation.isPending}
           >
             <CheckCircle className='mr-2 h-4 w-4' />
-            Acknowledge All
+            {text('全部确认', 'Acknowledge All')}
           </Button>
         )}
       </CardHeader>
       <CardContent>
         {alerts.length === 0 ? (
           <div className='flex flex-col items-center justify-center py-8 text-center'>
-            <CheckCircle className='h-12 w-12 text-emerald-500 mb-4' />
+            <CheckCircle className='mb-4 h-12 w-12 text-emerald-500' />
             <p className='text-lg font-medium text-muted-foreground'>
-              No alerts found
+              {text('未发现告警', 'No alerts found')}
             </p>
             <p className='text-sm text-muted-foreground'>
-              Your system is secure
+              {text('系统当前处于安全状态', 'Your system is secure')}
             </p>
           </div>
         ) : (
@@ -167,7 +175,7 @@ export function AlertsList({
                 <div
                   key={alert.id}
                   className={`
-                    flex items-start gap-4 p-4 rounded-lg border
+                    flex items-start gap-4 rounded-lg border p-4
                     ${alert.acknowledged ? 'opacity-60' : ''}
                     transition-opacity
                   `}
@@ -180,32 +188,29 @@ export function AlertsList({
                   >
                     <IconComponent className='h-5 w-5 text-white' />
                   </div>
-                  <div className='flex-1 min-w-0'>
-                    <div className='flex items-center gap-2 mb-1'>
+                  <div className='min-w-0 flex-1'>
+                    <div className='mb-1 flex items-center gap-2'>
                       <span className={`font-jersey text-xs tracking-wider ${config.textColor}`}>
-                        {config.label}
+                        {locale === 'zh' ? config.zh : config.en}
                       </span>
                       <span className='text-sm font-medium'>{alert.type}</span>
                     </div>
-                    <p className='text-sm text-muted-foreground truncate'>
+                    <p className='truncate text-sm text-muted-foreground'>
                       {alert.message}
                     </p>
-                    <p className='text-xs text-muted-foreground mt-1'>
-                      {formatDistanceToNow(new Date(alert.timestamp), {
-                        addSuffix: true,
-                        locale: enUS,
-                      })}
+                    <p className='mt-1 text-xs text-muted-foreground'>
+                      {formatRelativeTime(alert.timestamp, locale)}
                     </p>
                   </div>
                   {!alert.acknowledged && (
                     <Button
                       variant='ghost'
                       size='sm'
-                      onClick={() => handleAcknowledge(alert.id)}
+                      onClick={() => acknowledgeMutation.mutate(alert.id)}
                       disabled={acknowledgeMutation.isPending}
                     >
                       <CheckCircle className='mr-2 h-4 w-4' />
-                      Acknowledge
+                      {text('确认', 'Acknowledge')}
                     </Button>
                   )}
                 </div>

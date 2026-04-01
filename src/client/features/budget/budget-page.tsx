@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { DollarSign, Save, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { DollarSign, Loader2, Save } from 'lucide-react'
+import { Header } from '@/components/layout/header'
+import { Main } from '@/components/layout/main'
+import { LanguageSwitch } from '@/components/language-switch'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -8,24 +13,22 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ThemeSwitch } from '@/components/theme-switch'
-import { formatCurrency } from '@/lib/format'
+import { Switch } from '@/components/ui/switch'
+import { useLocale } from '@/context/locale-provider'
 import {
+  getBudgetStatus,
   getConfig,
   updateConfig,
-  getBudgetStatus,
   type BudgetPeriod,
 } from '@/lib/api'
+import { formatCurrency } from '@/lib/format'
 import { toast } from 'sonner'
 
 export function BudgetPage() {
+  const { text } = useLocale()
   const queryClient = useQueryClient()
 
   const { data: config, isLoading: configLoading } = useQuery({
@@ -46,16 +49,20 @@ export function BudgetPage() {
   const [weeklyEnabled, setWeeklyEnabled] = useState(true)
   const [monthlyEnabled, setMonthlyEnabled] = useState(true)
 
-  // Sync form state when config loads
   useEffect(() => {
     if (!config) return
-    const t = config.alertThresholds
-    setDaily(t.dailyBudget > 0 ? t.dailyBudget.toString() : '')
-    setWeekly(t.weeklyBudget > 0 ? t.weeklyBudget.toString() : '')
-    setMonthly(t.monthlyBudget > 0 ? t.monthlyBudget.toString() : '')
-    setDailyEnabled(t.dailyBudget > 0)
-    setWeeklyEnabled(t.weeklyBudget > 0)
-    setMonthlyEnabled(t.monthlyBudget > 0)
+
+    const thresholds = config.alertThresholds
+    setDaily(thresholds.dailyBudget > 0 ? thresholds.dailyBudget.toString() : '')
+    setWeekly(
+      thresholds.weeklyBudget > 0 ? thresholds.weeklyBudget.toString() : ''
+    )
+    setMonthly(
+      thresholds.monthlyBudget > 0 ? thresholds.monthlyBudget.toString() : ''
+    )
+    setDailyEnabled(thresholds.dailyBudget > 0)
+    setWeeklyEnabled(thresholds.weeklyBudget > 0)
+    setMonthlyEnabled(thresholds.monthlyBudget > 0)
   }, [config])
 
   const mutation = useMutation({
@@ -67,10 +74,10 @@ export function BudgetPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['config'] })
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] })
-      toast.success('Budget updated')
+      toast.success(text('预算已更新', 'Budget updated'))
     },
     onError: () => {
-      toast.error('Failed to update budget')
+      toast.error(text('预算更新失败', 'Failed to update budget'))
     },
   })
 
@@ -83,9 +90,12 @@ export function BudgetPage() {
   }
 
   const hasChanges = config
-    ? (dailyEnabled ? (parseFloat(daily) || 0) : 0) !== config.alertThresholds.dailyBudget ||
-      (weeklyEnabled ? (parseFloat(weekly) || 0) : 0) !== config.alertThresholds.weeklyBudget ||
-      (monthlyEnabled ? (parseFloat(monthly) || 0) : 0) !== config.alertThresholds.monthlyBudget
+    ? (dailyEnabled ? (parseFloat(daily) || 0) : 0) !==
+        config.alertThresholds.dailyBudget ||
+      (weeklyEnabled ? (parseFloat(weekly) || 0) : 0) !==
+        config.alertThresholds.weeklyBudget ||
+      (monthlyEnabled ? (parseFloat(monthly) || 0) : 0) !==
+        config.alertThresholds.monthlyBudget
     : false
 
   return (
@@ -93,56 +103,76 @@ export function BudgetPage() {
       <Header>
         <div className='flex items-center gap-2'>
           <DollarSign className='h-6 w-6' />
-          <span className='font-jersey text-xl'>Budget</span>
+          <span className='font-jersey text-xl'>{text('预算', 'Budget')}</span>
         </div>
         <div className='ms-auto flex items-center space-x-4'>
+          <LanguageSwitch />
           <ThemeSwitch />
         </div>
       </Header>
 
       <Main>
         <div className='mb-6'>
-          <h1 className='text-3xl font-bold tracking-tight'>Budget</h1>
+          <h1 className='text-3xl font-bold tracking-tight'>
+            {text('预算', 'Budget')}
+          </h1>
           <p className='text-muted-foreground'>
-            Set spending limits and track your budget usage
+            {text(
+              '设置花费上限并跟踪预算使用情况',
+              'Set spending limits and track budget usage'
+            )}
           </p>
         </div>
 
-        {/* Budget Status Bars */}
         {budgetLoading ? (
-          <div className='grid gap-4 sm:grid-cols-3 mb-6'>
+          <div className='mb-6 grid gap-4 sm:grid-cols-3'>
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className='h-24 w-full' />
             ))}
           </div>
-        ) : budgetStatus && (budgetStatus.daily || budgetStatus.weekly || budgetStatus.monthly) ? (
-          <div className='grid gap-4 sm:grid-cols-3 mb-6'>
+        ) : budgetStatus &&
+          (budgetStatus.daily || budgetStatus.weekly || budgetStatus.monthly) ? (
+          <div className='mb-6 grid gap-4 sm:grid-cols-3'>
             {budgetStatus.daily && (
-              <BudgetBar label='Daily Budget' period={budgetStatus.daily} />
+              <BudgetBar
+                label={text('日预算', 'Daily Budget')}
+                period={budgetStatus.daily}
+              />
             )}
             {budgetStatus.weekly && (
-              <BudgetBar label='Weekly Budget' period={budgetStatus.weekly} />
+              <BudgetBar
+                label={text('周预算', 'Weekly Budget')}
+                period={budgetStatus.weekly}
+              />
             )}
             {budgetStatus.monthly && (
-              <BudgetBar label='Monthly Budget' period={budgetStatus.monthly} />
+              <BudgetBar
+                label={text('月预算', 'Monthly Budget')}
+                period={budgetStatus.monthly}
+              />
             )}
           </div>
         ) : (
           <Card className='mb-6'>
             <CardContent className='pt-6'>
-              <p className='text-sm text-muted-foreground text-center'>
-                No budgets configured yet. Set your limits below.
+              <p className='text-center text-sm text-muted-foreground'>
+                {text(
+                  '还没有配置预算，请在下方设置额度。',
+                  'No budget configured yet. Set your limits below.'
+                )}
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* Budget Configuration */}
         <Card>
           <CardHeader>
-            <CardTitle>Budget Limits</CardTitle>
+            <CardTitle>{text('预算限制', 'Budget Limits')}</CardTitle>
             <CardDescription>
-              Set spending thresholds for alerts. Disable a period to turn off its alert.
+              {text(
+                '设置预算告警阈值。关闭某个周期即可停用对应提醒。',
+                'Set budget alert thresholds. Disable a period to turn off its reminders.'
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -155,21 +185,21 @@ export function BudgetPage() {
             ) : (
               <div className='space-y-6'>
                 <BudgetRow
-                  label='Daily'
+                  label={text('每日', 'Daily')}
                   value={daily}
                   enabled={dailyEnabled}
                   onValueChange={setDaily}
                   onEnabledChange={setDailyEnabled}
                 />
                 <BudgetRow
-                  label='Weekly'
+                  label={text('每周', 'Weekly')}
                   value={weekly}
                   enabled={weeklyEnabled}
                   onValueChange={setWeekly}
                   onEnabledChange={setWeeklyEnabled}
                 />
                 <BudgetRow
-                  label='Monthly'
+                  label={text('每月', 'Monthly')}
                   value={monthly}
                   enabled={monthlyEnabled}
                   onValueChange={setMonthly}
@@ -186,7 +216,7 @@ export function BudgetPage() {
                     ) : (
                       <Save className='mr-2 h-4 w-4' />
                     )}
-                    Save
+                    {text('保存', 'Save')}
                   </Button>
                 </div>
               </div>
@@ -211,11 +241,13 @@ function BudgetRow({
   onValueChange: (v: string) => void
   onEnabledChange: (v: boolean) => void
 }) {
+  const { text } = useLocale()
+
   return (
     <div className='flex items-center gap-4'>
       <Label className='w-20 text-sm font-medium'>{label}</Label>
-      <div className='relative flex-1 max-w-[200px]'>
-        <span className='absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm'>
+      <div className='relative max-w-[200px] flex-1'>
+        <span className='absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground'>
           $
         </span>
         <Input
@@ -230,8 +262,8 @@ function BudgetRow({
         />
       </div>
       <Switch checked={enabled} onCheckedChange={onEnabledChange} />
-      <span className='text-sm text-muted-foreground w-16'>
-        {enabled ? 'Active' : 'Off'}
+      <span className='w-16 text-sm text-muted-foreground'>
+        {enabled ? text('启用', 'Enabled') : text('关闭', 'Disabled')}
       </span>
     </div>
   )
@@ -244,6 +276,8 @@ function BudgetBar({
   label: string
   period: BudgetPeriod
 }) {
+  const { text } = useLocale()
+
   const color =
     period.percent >= 90
       ? 'bg-red-500'
@@ -260,7 +294,7 @@ function BudgetBar({
 
   return (
     <Card className='p-4'>
-      <div className='flex items-center justify-between mb-2'>
+      <div className='mb-2 flex items-center justify-between'>
         <span className='text-sm font-medium'>{label}</span>
         <span className={`text-sm font-semibold ${textColor}`}>
           {formatCurrency(period.spent)} / {formatCurrency(period.budget)}
@@ -272,8 +306,11 @@ function BudgetBar({
           style={{ width: `${Math.min(100, period.percent)}%` }}
         />
       </div>
-      <p className='text-xs text-muted-foreground mt-1'>
-        {period.percent.toFixed(0)}% used
+      <p className='mt-1 text-xs text-muted-foreground'>
+        {text(
+          `已使用 ${period.percent.toFixed(0)}%`,
+          `Used ${period.percent.toFixed(0)}%`
+        )}
       </p>
     </Card>
   )

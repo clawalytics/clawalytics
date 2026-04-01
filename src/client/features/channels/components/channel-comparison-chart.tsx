@@ -1,35 +1,34 @@
 import {
   Bar,
   BarChart,
+  CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Cell,
 } from 'recharts'
+import { useLocale } from '@/context/locale-provider'
 import type { Channel } from '@/lib/api'
 
 interface ChannelComparisonChartProps {
   channels: Channel[]
 }
 
-// Red gradient colors for bars (darker to lighter)
 const BAR_COLORS = [
-  '#7f1d1d', // Red 900
-  '#991b1b', // Red 800
-  '#b91c1c', // Red 700
-  '#dc2626', // Red 600
-  '#ef4444', // Red 500
-  '#f87171', // Red 400
-  '#fca5a5', // Red 300
-  '#fecaca', // Red 200
-  '#fee2e2', // Red 100
-  '#fef2f2', // Red 50
+  '#7f1d1d',
+  '#991b1b',
+  '#b91c1c',
+  '#dc2626',
+  '#ef4444',
+  '#f87171',
+  '#fca5a5',
+  '#fecaca',
+  '#fee2e2',
+  '#fef2f2',
 ]
 
 function getBarColor(index: number, total: number): string {
-  // Map index to color array, spreading evenly across available colors
   const colorIndex = Math.min(
     Math.floor((index / total) * BAR_COLORS.length),
     BAR_COLORS.length - 1
@@ -37,7 +36,6 @@ function getBarColor(index: number, total: number): string {
   return BAR_COLORS[colorIndex]
 }
 
-// Custom tick component for Jersey font
 interface CustomTickProps {
   x?: number | string
   y?: number | string
@@ -46,6 +44,7 @@ interface CustomTickProps {
 
 function CustomYAxisTick({ x, y, payload }: CustomTickProps) {
   if (!payload) return null
+
   return (
     <text
       x={Number(x)}
@@ -63,6 +62,9 @@ function CustomYAxisTick({ x, y, payload }: CustomTickProps) {
 export function ChannelComparisonChart({
   channels,
 }: ChannelComparisonChartProps) {
+  const { locale, text } = useLocale()
+  const numberLocale = locale === 'zh' ? 'zh-CN' : 'en-US'
+
   const chartData = channels
     .filter((channel) => channel.total_cost > 0 || channel.message_count > 0)
     .sort((a, b) => b.total_cost - a.total_cost)
@@ -76,14 +78,15 @@ export function ChannelComparisonChart({
 
   if (chartData.length === 0) {
     return (
-      <div className='flex h-[300px] items-center justify-center text-muted-foreground text-center px-4'>
-        No data available yet. Channel costs will be displayed here once
-        messages have been processed.
+      <div className='flex h-[300px] items-center justify-center px-4 text-center text-muted-foreground'>
+        {text(
+          '暂无数据。消息处理后，这里会显示渠道成本。',
+          'No data yet. Channel costs will appear here once messages are processed.'
+        )}
       </div>
     )
   }
 
-  // Dynamic height: 28px per channel, min 200px
   const chartHeight = Math.max(200, chartData.length * 28 + 40)
 
   return (
@@ -95,7 +98,7 @@ export function ChannelComparisonChart({
       >
         <CartesianGrid
           strokeDasharray='3 3'
-          horizontal={true}
+          horizontal
           vertical={false}
           stroke='hsl(var(--border))'
         />
@@ -119,41 +122,41 @@ export function ChannelComparisonChart({
         <Tooltip
           content={({ active, payload }) => {
             if (active && payload && payload.length) {
-              const tooltipData = payload[0].payload as (typeof chartData)[0]
+              const item = payload[0].payload as (typeof chartData)[0]
+
               return (
-                <div className='rounded-lg border bg-background p-3 shadow-md min-w-[180px]'>
-                  <div className='mb-2 font-jersey text-base'>
-                    {tooltipData.name}
-                  </div>
+                <div className='min-w-[180px] rounded-lg border bg-background p-3 shadow-md'>
+                  <div className='mb-2 font-jersey text-base'>{item.name}</div>
                   <div className='space-y-1.5'>
                     <div className='flex items-center justify-between gap-4'>
                       <span className='text-xs text-muted-foreground'>
-                        Cost
+                        {text('成本', 'Cost')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        ${tooltipData.cost.toFixed(4)}
+                      <span className='font-mono text-sm font-medium'>
+                        ${item.cost.toFixed(4)}
                       </span>
                     </div>
                     <div className='flex items-center justify-between gap-4'>
                       <span className='text-xs text-muted-foreground'>
-                        Messages
+                        {text('消息数', 'Messages')}
                       </span>
-                      <span className='font-mono font-medium text-sm'>
-                        {tooltipData.messages.toLocaleString('en-US')}
+                      <span className='font-mono text-sm font-medium'>
+                        {item.messages.toLocaleString(numberLocale)}
                       </span>
                     </div>
-                    <div className='flex items-center justify-between gap-4 text-xs text-muted-foreground border-t pt-1.5'>
+                    <div className='flex items-center justify-between gap-4 border-t pt-1.5 text-xs text-muted-foreground'>
                       <span>
-                        {(tooltipData.inputTokens / 1000).toFixed(1)}K in
+                        {(item.inputTokens / 1000).toFixed(1)}K {text('输入', 'in')}
                       </span>
                       <span>
-                        {(tooltipData.outputTokens / 1000).toFixed(1)}K out
+                        {(item.outputTokens / 1000).toFixed(1)}K {text('输出', 'out')}
                       </span>
                     </div>
                   </div>
                 </div>
               )
             }
+
             return null
           }}
         />

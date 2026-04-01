@@ -5,6 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
+  :root {
+    --desktop-titlebar-height: 0px;
+    --desktop-controls-width: 152px;
+    --desktop-titlebar-bg: oklch(0.985 0.003 247.858 / 0.72);
+    --desktop-titlebar-border: oklch(0.82 0.01 250 / 0.38);
+  }
   * {
     @apply border-border outline-ring/50;
     scrollbar-width: thin;
@@ -15,6 +21,26 @@
   }
   body {
     @apply min-h-svh w-full bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar;
+  }
+
+  .dark {
+    --desktop-titlebar-bg: oklch(0.145 0.005 285 / 0.74);
+    --desktop-titlebar-border: oklch(1 0 0 / 0.08);
+  }
+
+  .desktop-shell {
+    --desktop-titlebar-height: 48px;
+  }
+
+  .desktop-drag-region {
+    -webkit-app-region: drag;
+    app-region: drag;
+    user-select: none;
+  }
+
+  .desktop-no-drag {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
   }
 
   /* Jersey 15 pixel font for headings - no bold since pixel font is already thick */

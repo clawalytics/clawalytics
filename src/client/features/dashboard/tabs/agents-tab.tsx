@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { DollarSign, Coins, Activity, TrendingUp, Bot } from 'lucide-react'
+import { Activity, Bot, Coins, DollarSign, TrendingUp } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -8,17 +8,20 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatCurrency, formatNumber } from '@/lib/format'
-import { getAgentStats, getAllAgentsDailyCosts } from '@/lib/api'
-import { AgentsTable } from '@/features/agents/components/agents-table'
+import { useLocale } from '@/context/locale-provider'
 import { AgentCostChart } from '@/features/agents/components/agent-cost-chart'
 import { AgentDistributionChart } from '@/features/agents/components/agent-distribution-chart'
+import { AgentsTable } from '@/features/agents/components/agents-table'
+import { getAgentStats, getAllAgentsDailyCosts } from '@/lib/api'
+import { formatCurrency, formatNumber } from '@/lib/format'
 
 interface AgentsTabProps {
   enabled: boolean
 }
 
 export function AgentsTab({ enabled }: AgentsTabProps) {
+  const { text } = useLocale()
+
   const { data: agentStats, isLoading: statsLoading } = useQuery({
     queryKey: ['agentStats'],
     queryFn: () => getAgentStats(50),
@@ -34,17 +37,24 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
   })
 
   const agents = agentStats?.agents ?? []
-  const totalInputTokens = agents.reduce((acc, a) => acc + a.total_input_tokens, 0)
-  const totalOutputTokens = agents.reduce((acc, a) => acc + a.total_output_tokens, 0)
+  const totalInputTokens = agents.reduce(
+    (acc, agent) => acc + agent.total_input_tokens,
+    0
+  )
+  const totalOutputTokens = agents.reduce(
+    (acc, agent) => acc + agent.total_output_tokens,
+    0
+  )
 
   return (
     <div className='space-y-6'>
-      {/* Stats Cards Row */}
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
         <Card className='relative overflow-hidden'>
-          <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full' />
+          <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-red-500/10 to-transparent' />
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Agent Costs</CardTitle>
+            <CardTitle className='text-sm font-medium'>
+              {text('代理总成本', 'Total Agent Cost')}
+            </CardTitle>
             <div className='rounded-full bg-red-500/10 p-2'>
               <DollarSign className='h-4 w-4 text-red-500' />
             </div>
@@ -52,7 +62,7 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
           <CardContent>
             {statsLoading ? (
               <>
-                <Skeleton className='h-8 w-24 mb-1' />
+                <Skeleton className='mb-1 h-8 w-24' />
                 <Skeleton className='h-4 w-32' />
               </>
             ) : (
@@ -60,16 +70,20 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
                 <div className='text-2xl font-bold text-red-600 dark:text-red-400'>
                   {formatCurrency(agentStats?.totalCost ?? 0)}
                 </div>
-                <p className='text-xs text-muted-foreground'>All agents combined</p>
+                <p className='text-xs text-muted-foreground'>
+                  {text('所有代理合计', 'Across all agents')}
+                </p>
               </>
             )}
           </CardContent>
         </Card>
 
         <Card className='relative overflow-hidden'>
-          <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-rose-500/10 to-transparent rounded-bl-full' />
+          <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-rose-500/10 to-transparent' />
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Number of Agents</CardTitle>
+            <CardTitle className='text-sm font-medium'>
+              {text('代理数量', 'Agents')}
+            </CardTitle>
             <div className='rounded-full bg-rose-500/10 p-2'>
               <Bot className='h-4 w-4 text-rose-500' />
             </div>
@@ -77,22 +91,28 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
           <CardContent>
             {statsLoading ? (
               <>
-                <Skeleton className='h-8 w-16 mb-1' />
+                <Skeleton className='mb-1 h-8 w-16' />
                 <Skeleton className='h-4 w-24' />
               </>
             ) : (
               <>
-                <div className='text-2xl font-bold text-rose-600 dark:text-rose-400'>{agents.length}</div>
-                <p className='text-xs text-muted-foreground'>Registered agents</p>
+                <div className='text-2xl font-bold text-rose-600 dark:text-rose-400'>
+                  {agents.length}
+                </div>
+                <p className='text-xs text-muted-foreground'>
+                  {text('已注册代理', 'Registered agents')}
+                </p>
               </>
             )}
           </CardContent>
         </Card>
 
         <Card className='relative overflow-hidden'>
-          <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full' />
+          <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-red-500/10 to-transparent' />
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Tokens</CardTitle>
+            <CardTitle className='text-sm font-medium'>
+              {text('总 Token 数', 'Total Tokens')}
+            </CardTitle>
             <div className='rounded-full bg-red-500/10 p-2'>
               <Coins className='h-4 w-4 text-red-500' />
             </div>
@@ -100,7 +120,7 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
           <CardContent>
             {statsLoading ? (
               <>
-                <Skeleton className='h-8 w-24 mb-1' />
+                <Skeleton className='mb-1 h-8 w-24' />
                 <Skeleton className='h-4 w-32' />
               </>
             ) : (
@@ -109,7 +129,10 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
                   {formatNumber(totalInputTokens + totalOutputTokens)}
                 </div>
                 <p className='text-xs text-muted-foreground'>
-                  {formatNumber(totalInputTokens)} in / {formatNumber(totalOutputTokens)} out
+                  {text(
+                    `输入 ${formatNumber(totalInputTokens)} / 输出 ${formatNumber(totalOutputTokens)}`,
+                    `In ${formatNumber(totalInputTokens)} / Out ${formatNumber(totalOutputTokens)}`
+                  )}
                 </p>
               </>
             )}
@@ -117,9 +140,11 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
         </Card>
 
         <Card className='relative overflow-hidden'>
-          <div className='absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full' />
+          <div className='absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-red-500/10 to-transparent' />
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Sessions</CardTitle>
+            <CardTitle className='text-sm font-medium'>
+              {text('总会话数', 'Total Sessions')}
+            </CardTitle>
             <div className='rounded-full bg-red-500/10 p-2'>
               <Activity className='h-4 w-4 text-red-500' />
             </div>
@@ -127,7 +152,7 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
           <CardContent>
             {statsLoading ? (
               <>
-                <Skeleton className='h-8 w-16 mb-1' />
+                <Skeleton className='mb-1 h-8 w-16' />
                 <Skeleton className='h-4 w-24' />
               </>
             ) : (
@@ -135,22 +160,25 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
                 <div className='text-2xl font-bold text-red-600 dark:text-red-400'>
                   {agentStats?.totalSessions ?? 0}
                 </div>
-                <p className='text-xs text-muted-foreground'>All agent sessions</p>
+                <p className='text-xs text-muted-foreground'>
+                  {text('全部代理会话', 'Across all agents')}
+                </p>
               </>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row */}
       <div className='grid grid-cols-1 gap-6 lg:grid-cols-7'>
         <Card className='col-span-1 lg:col-span-4'>
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <TrendingUp className='h-5 w-5' />
-              Daily Costs
+              {text('每日成本', 'Daily Cost')}
             </CardTitle>
-            <CardDescription>Agent costs for the last 30 days</CardDescription>
+            <CardDescription>
+              {text('最近 30 天的代理成本', 'Agent costs over the last 30 days')}
+            </CardDescription>
           </CardHeader>
           <CardContent className='ps-2'>
             {dailyCostsLoading ? (
@@ -163,8 +191,10 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
 
         <Card className='col-span-1 lg:col-span-3'>
           <CardHeader>
-            <CardTitle>Cost Distribution</CardTitle>
-            <CardDescription>Costs by agent</CardDescription>
+            <CardTitle>{text('成本分布', 'Cost Distribution')}</CardTitle>
+            <CardDescription>
+              {text('按代理查看成本', 'View costs by agent')}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {statsLoading ? (
@@ -176,11 +206,12 @@ export function AgentsTab({ enabled }: AgentsTabProps) {
         </Card>
       </div>
 
-      {/* Agents Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Agents</CardTitle>
-          <CardDescription>List of all registered OpenClaw Agents</CardDescription>
+          <CardTitle>{text('全部代理', 'All Agents')}</CardTitle>
+          <CardDescription>
+            {text('所有已注册的 OpenClaw 代理', 'All registered OpenClaw agents')}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {statsLoading ? (

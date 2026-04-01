@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { useLocale } from '@/context/locale-provider'
 import type { TokenBreakdown } from '@/lib/api'
 
 interface TokenBreakdownCardProps {
@@ -16,7 +17,6 @@ interface TokenBarItem {
   value: number
   percentage: number
   color: string
-  bgColor: string
 }
 
 function formatTokenCount(value: number): string {
@@ -27,16 +27,18 @@ function formatTokenCount(value: number): string {
 }
 
 export function TokenBreakdownCard({ data }: TokenBreakdownCardProps) {
+  const { text } = useLocale()
+
   if (!data) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Token Breakdown</CardTitle>
-          <CardDescription>Last 30 days</CardDescription>
+          <CardTitle>{text('Token 构成', 'Token Breakdown')}</CardTitle>
+          <CardDescription>{text('最近 30 天', 'Last 30 days')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className='flex h-[200px] items-center justify-center text-muted-foreground'>
-            Loading...
+            {text('加载中...', 'Loading...')}
           </div>
         </CardContent>
       </Card>
@@ -49,60 +51,60 @@ export function TokenBreakdownCard({ data }: TokenBreakdownCardProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Token Breakdown</CardTitle>
-          <CardDescription>Last 30 days</CardDescription>
+          <CardTitle>{text('Token 构成', 'Token Breakdown')}</CardTitle>
+          <CardDescription>{text('最近 30 天', 'Last 30 days')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className='flex h-[200px] items-center justify-center text-muted-foreground text-center px-4'>
-            No data yet. Start using Claude Code to see your token usage here.
+          <div className='flex h-[200px] items-center justify-center px-4 text-center text-muted-foreground'>
+            {text(
+              '暂无数据。开始使用 Claude Code 后，这里会显示你的 Token 使用情况。',
+              'No data yet. Start using Claude Code to see your token usage here.'
+            )}
           </div>
         </CardContent>
       </Card>
     )
   }
 
-  // Red/rose palette matching Clawalytics branding
   const items: TokenBarItem[] = [
     {
-      label: 'Input',
+      label: text('输入', 'Input'),
       value: data.input,
       percentage: (data.input / total) * 100,
-      color: '#ef4444', // Red 500
-      bgColor: 'bg-red-500',
+      color: '#ef4444',
     },
     {
-      label: 'Output',
+      label: text('输出', 'Output'),
       value: data.output,
       percentage: (data.output / total) * 100,
-      color: '#f43f5e', // Rose 500
-      bgColor: 'bg-rose-500',
+      color: '#f43f5e',
     },
     {
-      label: 'Cache (read)',
+      label: text('缓存读取', 'Cache (read)'),
       value: data.cacheRead,
       percentage: (data.cacheRead / total) * 100,
-      color: '#10b981', // Emerald 500 (savings = green)
-      bgColor: 'bg-emerald-500',
+      color: '#10b981',
     },
     {
-      label: 'Cache (write)',
+      label: text('缓存写入', 'Cache (write)'),
       value: data.cacheCreation,
       percentage: (data.cacheCreation / total) * 100,
-      color: '#ec4899', // Pink 500
-      bgColor: 'bg-pink-500',
+      color: '#ec4899',
     },
-  ].filter((item) => item.value > 0) // Only show items with values
+  ].filter((item) => item.value > 0)
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Token Breakdown</CardTitle>
+        <CardTitle>{text('Token 构成', 'Token Breakdown')}</CardTitle>
         <CardDescription>
-          Last 30 days &middot; {formatTokenCount(total)} tokens total
+          {text(
+            `最近 30 天 · 共 ${formatTokenCount(total)} 个 Token`,
+            `Last 30 days · ${formatTokenCount(total)} tokens total`
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-6'>
-        {/* Stacked horizontal bar */}
         <div className='space-y-2'>
           <div className='flex h-8 w-full overflow-hidden rounded-full'>
             {items.map((item, idx) => (
@@ -116,24 +118,21 @@ export function TokenBreakdownCard({ data }: TokenBreakdownCardProps) {
           </div>
         </div>
 
-        {/* Legend with details */}
         <div className='grid grid-cols-2 gap-4'>
           {items.map((item, idx) => (
             <div key={idx} className='flex items-center gap-3'>
               <div
-                className='h-3 w-3 rounded-full shrink-0'
+                className='h-3 w-3 shrink-0 rounded-full'
                 style={{ backgroundColor: item.color }}
               />
               <div className='min-w-0 flex-1'>
                 <div className='flex items-baseline justify-between gap-2'>
-                  <span className='text-sm font-medium truncate'>
-                    {item.label}
-                  </span>
-                  <span className='text-sm text-muted-foreground tabular-nums shrink-0'>
+                  <span className='truncate text-sm font-medium'>{item.label}</span>
+                  <span className='shrink-0 tabular-nums text-sm text-muted-foreground'>
                     {item.percentage.toFixed(1)}%
                   </span>
                 </div>
-                <div className='text-xs text-muted-foreground font-mono'>
+                <div className='font-mono text-xs text-muted-foreground'>
                   {formatTokenCount(item.value)}
                 </div>
               </div>
@@ -141,8 +140,7 @@ export function TokenBreakdownCard({ data }: TokenBreakdownCardProps) {
           ))}
         </div>
 
-        {/* Individual progress bars */}
-        <div className='space-y-3 pt-2 border-t'>
+        <div className='space-y-3 border-t pt-2'>
           {items.map((item, idx) => (
             <div key={idx} className='space-y-1.5'>
               <div className='flex items-center justify-between text-xs'>
